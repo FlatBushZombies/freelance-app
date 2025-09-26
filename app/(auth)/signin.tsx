@@ -3,7 +3,7 @@ import { View, Text } from "react-native";
 export default function SignIn() {
     return (
         <View>
-            <Text> Sign In</Text>
+            <Text className="text-black"> Sign In</Text>
         </View>
     )
 }
