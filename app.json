@@ -44,6 +44,19 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3c6718c1-3dc9-48b5-99ea-75e924a4d2f2"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/3c6718c1-3dc9-48b5-99ea-75e924a4d2f2"
+    },
+    "owner": "bigcat87"
   }
 }

@@ -2,7 +2,12 @@ import { Stack, SplashScreen } from "expo-router";
 import { useFonts } from 'expo-font';
 import { useEffect } from "react";
 
+import { ClerkProvider } from '@clerk/clerk-expo'
+
 import './globals.css';
+
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 export default function RootLayout() {
   const [fontsLoaded, error] = useFonts({
@@ -19,5 +24,9 @@ export default function RootLayout() {
 
 
   }, [fontsLoaded, error])
-  return <Stack  screenOptions={{headerShown: false}}/>;
+  return ( 
+  <ClerkProvider publishableKey={publishableKey}>
+  <Stack  screenOptions={{headerShown: false}}/> 
+  </ClerkProvider>
+);
 }
