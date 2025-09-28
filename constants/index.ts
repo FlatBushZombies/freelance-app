@@ -6,6 +6,12 @@ import lock from "@/assets/icons/lock.png";
 import signUpCar from "@/assets/images/signup-car.png";
 import check from "@/assets/images/check.png";
 
+import home from "@/assets/icons/home.png"
+import profile from "@/assets/icons/profile.png"
+import chat from "@/assets/icons/chat.png"
+import list from "@/assets/icons/list.png"
+
+
 export const IMAGES = {
     illustration,
     signUpCar,
@@ -16,7 +22,11 @@ export const icons = {
     google,
     person,
     email,
-    lock
+    lock,
+    home,
+    list,
+    chat, 
+    profile
 }
 
 export const onboarding = [
