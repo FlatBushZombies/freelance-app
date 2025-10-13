@@ -11,6 +11,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { NotificationBell } from "@/components/Notifications";
 import { fetchAPI } from "@/lib/fetch";
 
 interface Job {
@@ -239,9 +240,7 @@ const Home = () => {
               {user?.firstName || "Freelancer"}
             </Text>
           </View>
-          <TouchableOpacity className="w-12 h-12 rounded-full bg-gray-100 items-center justify-center">
-            <Text className="text-xl">🔔</Text>
-          </TouchableOpacity>
+          {user?.id && <NotificationBell userId={user.id} />}
         </View>
 
         {/* Search Bar */}
