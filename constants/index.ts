@@ -10,12 +10,14 @@ import home from "@/assets/icons/home.png"
 import profile from "@/assets/icons/profile.png"
 import chat from "@/assets/icons/chat.png"
 import list from "@/assets/icons/list.png"
+import logo from "@/assets/images/quickhands.png"
 
 
 export const IMAGES = {
     illustration,
     signUpCar,
-    check
+    check,
+    logo
 };
 
 export const icons = {

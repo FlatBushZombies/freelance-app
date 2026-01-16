@@ -84,14 +84,9 @@ const SignUp = () => {
   return (
     <ScrollView className="flex-1 bg-white">
       <View className="flex-1 bg-white">
-      <View className="relative w-full h-[250px]">
-          <Text className="text-2xl text-black font-JakartaSemiBold absolute bottom-5 left-5">
-            SignUp and get your first client, it's that simple 👋
-          </Text>
-        </View>
-        <View className="relative w-full h-[250px]">
-          <Text className="text-2xl text-black font-JakartaSemiBold absolute bottom-5 left-5">
-            Create Your Account
+        <View className="relative w-full h-[250px]" style={{ backgroundColor: "#F9FAFB" }}>
+          <Text className="text-2xl text-black font-JakartaSemiBold absolute bottom-5 left-5" style={{ textShadowColor: "rgba(0, 0, 0, 0.02)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}>
+            Sign up and get your first client, it&apos;s that simple 👋
           </Text>
         </View>
         <View className="p-5">
@@ -149,7 +144,7 @@ const SignUp = () => {
               Verification
             </Text>
             <Text className="font-Jakarta mb-5">
-              We've sent a verification code to {form.email}.
+              We&apos;ve sent a verification code to {form.email}.
             </Text>
             <InputField
               label={"Code"}

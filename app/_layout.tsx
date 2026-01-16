@@ -1,6 +1,7 @@
 import { Stack, SplashScreen } from "expo-router";
 import { useFonts } from 'expo-font';
 import { useEffect } from "react";
+import  Toast  from "react-native-toast-message"
 
 import { ClerkProvider } from '@clerk/clerk-expo'
 
@@ -25,8 +26,10 @@ export default function RootLayout() {
 
   }, [fontsLoaded, error])
   return ( 
+    
   <ClerkProvider publishableKey={publishableKey}>
   <Stack  screenOptions={{headerShown: false}}/> 
+  <Toast />
   </ClerkProvider>
 );
 }

@@ -86,7 +86,7 @@ const ProfileScreen = () => {
   }
 
   const renderProject = (project: any) => (
-    <View key={project.id} className="bg-white rounded-2xl p-4 shadow-sm mb-4">
+    <View key={project.id} className="bg-white rounded-2xl p-4 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 }}>
       <View className="flex-row justify-between items-start mb-2">
         <Text className="text-lg font-semibold text-gray-900 flex-1 mr-2">{project.title}</Text>
         <View className={`px-2 py-1 rounded ${project.status === "completed" ? "bg-green-50" : "bg-blue-50"}`}>
@@ -136,7 +136,7 @@ const ProfileScreen = () => {
   const renderPersonalInfo = () => (
     <View className="px-4 py-4">
       {/* Name Section */}
-      <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+      <View className="bg-white rounded-2xl p-4 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4 }}>
         <View className="flex-row justify-between items-center border-b border-gray-100 pb-3">
           <View className="flex-1">
             <Text className="text-lg font-semibold text-gray-900 mb-1">Please fill in your name</Text>
@@ -149,7 +149,7 @@ const ProfileScreen = () => {
       </View>
 
       {/* About You Section */}
-      <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+      <View className="bg-white rounded-2xl p-4 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4 }}>
         <View className="flex-row justify-between items-start border-b border-gray-100 pb-3">
           <View className="flex-1">
             <Text className="text-lg font-semibold text-gray-900 mb-2">About you</Text>
@@ -164,7 +164,7 @@ const ProfileScreen = () => {
       </View>
 
       {/* Education and Experience Section */}
-      <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+      <View className="bg-white rounded-2xl p-4 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4 }}>
         <View className="flex-row justify-between items-start border-b border-gray-100 pb-3">
           <View className="flex-1">
             <Text className="text-lg font-semibold text-gray-900 mb-2">Education and Experience</Text>
@@ -177,7 +177,7 @@ const ProfileScreen = () => {
       </View>
 
       {/* Address and Region Section */}
-      <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+      <View className="bg-white rounded-2xl p-4 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4 }}>
         <View className="flex-row justify-between items-start border-b border-gray-100 pb-3">
           <View className="flex-1">
             <Text className="text-lg font-semibold text-gray-900 mb-2">Address and Region</Text>
@@ -255,6 +255,8 @@ const ProfileScreen = () => {
 
               <TouchableOpacity
                 className="bg-gray-900 rounded-lg px-6 py-3 w-full"
+                activeOpacity={0.85}
+                style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 6 }}
                 onPress={() => {
                   // Handle verification process
                   setShowVerificationModal(false)
@@ -277,7 +279,7 @@ const ProfileScreen = () => {
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* User Info Section */}
-        <View className="bg-white mx-4 mt-4 rounded-2xl p-6 shadow-sm">
+        <View className="bg-white mx-4 mt-4 rounded-2xl p-6" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 8 }}>
           <View className="items-center mb-4">
             <Image
               source={{ uri: user?.imageUrl || "/diverse-user-avatars.png" }}
@@ -308,7 +310,7 @@ const ProfileScreen = () => {
         </View>
 
         {/* Horizontal Tab Navigation */}
-        <View className="mx-4 mt-4 bg-white rounded-2xl shadow-sm">
+        <View className="mx-4 mt-4 bg-white rounded-2xl" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4 }}>
           <View className="flex-row">
             <TouchableOpacity
               className={`flex-1 py-4 items-center border-b-2 ${
@@ -352,28 +354,6 @@ const ProfileScreen = () => {
           <WalletComponent />
         )}
       </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View className="bg-white border-t border-gray-200 px-4 py-2 pb-6">
-        <View className="flex-row justify-around">
-          <TouchableOpacity className="items-center py-2">
-            <Ionicons name="home-outline" size={24} color="#9CA3AF" />
-            <Text className="text-gray-400 text-xs mt-1 font-medium">Home</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="items-center py-2">
-            <Ionicons name="briefcase-outline" size={24} color="#9CA3AF" />
-            <Text className="text-gray-400 text-xs mt-1 font-medium">My Projects</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="items-center py-2">
-            <Ionicons name="chatbubble-outline" size={24} color="#9CA3AF" />
-            <Text className="text-gray-400 text-xs mt-1 font-medium">Messages</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="items-center py-2">
-            <Ionicons name="person" size={24} color="#0EA5E9" />
-            <Text className="text-sky-500 text-xs mt-1 font-semibold">Profile</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
     </SafeAreaView>
   )
 }

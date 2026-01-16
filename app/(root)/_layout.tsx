@@ -1,93 +1,130 @@
-import { Tabs, router } from "expo-router";
-import { Image, ImageSourcePropType, View, ActivityIndicator } from "react-native";
-import { useUser } from "@clerk/clerk-expo";
-import { useEffect } from "react";
-import { icons } from "@/constants";
+"use client"
 
+import { Tabs, router } from "expo-router"
+import {
+  Image,
+  type ImageSourcePropType,
+  View,
+  ActivityIndicator,
+  Platform,
+  Text,
+} from "react-native"
+import { useUser } from "@clerk/clerk-expo"
+import { useEffect, useState } from "react"
+import { ArrowUpOnSquareStackIcon } from "react-native-heroicons/outline"
+
+import { icons } from "@/constants"
+
+/* -----------------------------------------
+   Tab Icon Component (Image OR Heroicon)
+------------------------------------------ */
 const TabIcon = ({
   source,
+  Icon,
   focused,
 }: {
-  source: ImageSourcePropType;
-  focused: boolean;
+  source?: ImageSourcePropType
+  Icon?: React.ComponentType<{
+    size?: number
+    color?: string
+    strokeWidth?: number
+  }>
+  focused: boolean
 }) => (
-  <View
-    className={`flex flex-row justify-center items-center rounded-full ${
-      focused ? "bg-general-300" : ""
-    }`}
-  >
+  <View className="flex items-center justify-center" style={{ paddingTop: 6 }}>
+    {/* Active indicator */}
     <View
-      className={`rounded-full w-12 h-12 items-center justify-center ${
-        focused ? "bg-general-400" : ""
-      }`}
-    >
+      style={{
+        width: 28,
+        height: 3,
+        backgroundColor: focused ? "#000000" : "transparent",
+        borderRadius: 2,
+        marginBottom: 6,
+      }}
+    />
+
+    {Icon ? (
+      <Icon
+        size={24}
+        color={focused ? "#000000" : "#9ca3af"}
+        strokeWidth={2}
+      />
+    ) : (
       <Image
         source={source}
-        tintColor="white"
+        tintColor={focused ? "#000000" : "#9ca3af"}
         resizeMode="contain"
-        className="w-7 h-7"
+        className="w-6 h-6"
       />
-    </View>
+    )}
   </View>
-);
+)
 
 export default function Layout() {
-  const { isLoaded, isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser()
+  const [isNavigationReady, setIsNavigationReady] = useState(false)
+
+  // Wait for navigation to be ready
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsNavigationReady(true)
+    }, 100)
+
+    return () => clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
-    if (!isLoaded) return; // Wait until Clerk is ready
+    if (!isLoaded || !isNavigationReady) return
 
     if (!isSignedIn) {
-      router.replace("/"); // Redirect unauthenticated users to landing
-      return;
+      router.replace("/")
+      return
     }
 
-    // ✅ Safely handle possible null or undefined createdAt
-    const createdAt = user?.createdAt ? new Date(user.createdAt) : null;
+    const createdAt = user?.createdAt ? new Date(user.createdAt) : null
     const isNewUser =
-      createdAt !== null && Date.now() - createdAt.getTime() < 60 * 1000; // within 1 minute
+      createdAt !== null && Date.now() - createdAt.getTime() < 60 * 1000
 
     if (isNewUser) {
-      router.replace("/onboarding");
+      router.replace("/(auth)/onboarding")
     }
-  }, [isLoaded, isSignedIn, user]);
+  }, [isLoaded, isSignedIn, user, isNavigationReady])
 
-  // Show loading indicator while Clerk is initializing
   if (!isLoaded) {
     return (
-      <View className="flex-1 justify-center items-center bg-black">
-        <ActivityIndicator size="large" color="white" />
+      <View className="flex-1 justify-center items-center bg-white">
+        <ActivityIndicator size="large" color="#111827" />
+        <Text className="text-gray-500 text-sm mt-4 font-semibold">
+          Loading...
+        </Text>
       </View>
-    );
+    )
   }
 
-  // Render the main tab layout once authenticated
   return (
     <Tabs
       initialRouteName="home"
       screenOptions={{
-        tabBarActiveTintColor: "white",
-        tabBarInactiveTintColor: "white",
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: "#333333",
-          borderRadius: 50,
-          paddingBottom: 0,
-          overflow: "hidden",
-          marginHorizontal: 20,
-          marginBottom: 20,
-          height: 78,
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexDirection: "row",
-          position: "absolute",
+          backgroundColor: "#ffffff",
+          borderTopWidth: 1,
+          borderTopColor: "#e5e7eb",
+          paddingBottom: Platform.OS === "ios" ? 24 : 12,
+          paddingTop: 8,
+          height: Platform.OS === "ios" ? 88 : 76,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
+          elevation: 8,
         },
       }}
     >
+      {/* Home */}
       <Tabs.Screen
         name="home"
         options={{
-          title: "Jobs",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon source={icons.home} focused={focused} />
@@ -95,10 +132,21 @@ export default function Layout() {
         }}
       />
 
+      
+      <Tabs.Screen
+        name="chat"
+        options={{
+          headerShown: false,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon source={icons.chat} focused={focused} />
+          ),
+        }}
+      />
+
+      {/* Profile — no header */}
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
             <TabIcon source={icons.profile} focused={focused} />
@@ -107,15 +155,17 @@ export default function Layout() {
       />
 
       <Tabs.Screen
-        name="chat"
+        name="train"
         options={{
-          title: "Chat",
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={icons.chat} focused={focused} />
+            <TabIcon
+              Icon={ArrowUpOnSquareStackIcon}
+              focused={focused}
+            />
           ),
         }}
       />
     </Tabs>
-  );
+  )
 }

@@ -10,6 +10,7 @@ import {
   Pressable, 
   RefreshControl 
 } from "react-native"
+import { BellIcon } from "react-native-heroicons/outline"
 import { io, type Socket } from "socket.io-client"
 
 interface Notification {
@@ -166,7 +167,9 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
         className="w-12 h-12 rounded-full bg-gray-100 items-center justify-center relative"
         activeOpacity={0.7}
       >
-        <Text className="text-xl">🔔</Text>
+        <Text className="text-xl">
+          <BellIcon size={24} color="#111827" />
+        </Text>
         {unreadCount > 0 && (
           <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 items-center justify-center px-1">
             <Text className="text-white text-xs font-bold">{unreadCount > 99 ? "99+" : unreadCount}</Text>

@@ -27,10 +27,19 @@ const Onboarding = () => {
   const [hourlyRate, setHourlyRate] = useState("");
   const [loading, setLoading] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
+  const [isNavigationReady, setIsNavigationReady] = useState(false);
+
+  // Wait for navigation to be ready
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsNavigationReady(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Check if user already completed onboarding
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !isNavigationReady) return;
 
     if (!user) {
       router.replace("/");
@@ -63,7 +72,7 @@ const Onboarding = () => {
     };
     
     checkOnboarding();
-  }, [user, isLoaded]);
+  }, [user, isLoaded, isNavigationReady]);
 
   const isFormValid = () => {
     return (
@@ -125,8 +134,9 @@ const Onboarding = () => {
     return (
       <View className="flex-1 justify-center items-center bg-white">
         <ActivityIndicator size="large" color="#111827" />
+        <Text className="text-gray-500 text-sm mt-4 font-semibold">Preparing your profile...</Text>
       </View>
-    );
+    )
   }
 
   return (
@@ -148,7 +158,7 @@ const Onboarding = () => {
           >
             {/* Illustration */}
             <View className="items-center mb-6">
-              <View className="w-64 h-48 items-center justify-center">
+              <View className="w-64 h-48 items-center justify-center" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4 }}>
                 <Image
                   source={{
                     uri: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/freelance-animator-get-a-quote.jpg-LcEVYb5xNc7ZhcNSKGW99Tdksw4UGf.webp",
@@ -160,13 +170,13 @@ const Onboarding = () => {
             </View>
 
             {/* Header */}
-            <Text className="text-orange-500 text-sm font-semibold mb-2 tracking-wide uppercase">
+            <Text className="text-orange-500 text-sm font-semibold mb-2 tracking-wide uppercase" style={{ letterSpacing: 1.2 }}>
               Welcome to QuickHands
             </Text>
-            <Text className="text-3xl font-bold text-gray-900 mb-2 leading-tight">
+            <Text className="text-3xl font-bold text-gray-900 mb-2 leading-tight" style={{ textShadowColor: "rgba(0, 0, 0, 0.02)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}>
               Let us set up your profile
             </Text>
-            <Text className="text-gray-500 text-base mb-8 leading-relaxed">
+            <Text className="text-gray-500 text-base mb-8 leading-relaxed" style={{ lineHeight: 24 }}>
               Tell us about yourself so we can match you with the perfect gigs.
             </Text>
 
@@ -188,7 +198,8 @@ const Onboarding = () => {
                 onChangeText={setFullName}
                 placeholder="Enter your full name"
                 placeholderTextColor="#9CA3AF"
-                className="bg-white border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 text-base shadow-sm"
+                className="bg-white border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 text-base"
+                style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}
               />
             </View>
 
@@ -210,7 +221,8 @@ const Onboarding = () => {
                 onChangeText={setSkills}
                 placeholder="e.g. Web Design, React, Copywriting"
                 placeholderTextColor="#9CA3AF"
-                className="bg-white border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 text-base shadow-sm"
+                className="bg-white border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 text-base"
+                style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -239,14 +251,16 @@ const Onboarding = () => {
                   <TouchableOpacity
                     key={level.value}
                     onPress={() => setExperienceLevel(level.value)}
-                    className={`bg-white border-2 rounded-2xl px-5 py-4 shadow-sm ${
+                    activeOpacity={0.8}
+                    className={`bg-white border-2 rounded-2xl px-5 py-4 ${
                       experienceLevel === level.value ? "bg-gray-50" : "border-gray-200"
                     }`}
-                    style={
+                    style={[
+                      { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
                       experienceLevel === level.value
-                        ? { borderColor: "#111827" }
+                        ? { borderColor: "#111827", shadowOpacity: 0.08, shadowRadius: 12 }
                         : {}
-                    }
+                    ]}
                   >
                     <View className="flex-row items-center justify-between">
                       <View>
@@ -290,7 +304,7 @@ const Onboarding = () => {
                   Hourly Rate (USD)
                 </Text>
               </View>
-              <View className="flex-row items-center bg-white border border-gray-200 rounded-2xl px-5 py-4 shadow-sm">
+              <View className="flex-row items-center bg-white border border-gray-200 rounded-2xl px-5 py-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}>
                 <Text className="text-gray-500 text-lg mr-2">$</Text>
                 <TextInput
                   value={hourlyRate}
@@ -307,21 +321,25 @@ const Onboarding = () => {
             {/* Info Box */}
             <View className="bg-orange-50 rounded-2xl px-5 py-4 border border-orange-100 mb-6">
               <Text className="text-orange-800 text-sm leading-relaxed">
-                💡 Do nott worry, you can update all of this information later in your profile settings.
+                💡 Don&apos;t worry, you can update all of this information later in your profile settings.
               </Text>
             </View>
           </ScrollView>
 
           {/* Submit Button */}
-          <View className="px-6 pb-6 pt-4 bg-white border-t border-gray-100">
+          <View className="px-6 pb-6 pt-4 bg-white border-t border-gray-100" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 8 }}>
             <TouchableOpacity
               onPress={handleSubmit}
               disabled={!isFormValid() || loading}
-              className="rounded-2xl py-4 items-center justify-center shadow-lg"
-              style={{
-                backgroundColor:
-                  !isFormValid() || loading ? "#D1D5DB" : "#111827",
-              }}
+              activeOpacity={0.85}
+              className="rounded-2xl py-4 items-center justify-center"
+              style={[
+                {
+                  backgroundColor:
+                    !isFormValid() || loading ? "#D1D5DB" : "#111827",
+                },
+                { shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 8 }
+              ]}
             >
               <Text className="text-white text-base font-bold">
                 {loading ? "Setting up your profile..." : "Get Started"}
@@ -331,10 +349,10 @@ const Onboarding = () => {
 
           {/* Loading Overlay */}
           {loading && (
-            <View className="absolute inset-0 justify-center items-center bg-black/30">
-              <View className="bg-white rounded-3xl p-6 items-center shadow-2xl">
+            <View className="absolute inset-0 justify-center items-center" style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}>
+              <View className="bg-white rounded-3xl p-8 items-center" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.3, shadowRadius: 30, elevation: 16 }}>
                 <ActivityIndicator size="large" color="#111827" />
-                <Text className="text-gray-900 font-semibold mt-4">
+                <Text className="text-gray-900 font-semibold mt-4 text-base">
                   Creating your profile...
                 </Text>
               </View>
