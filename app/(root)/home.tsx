@@ -1,6 +1,7 @@
 "use client"
 
 import { NotificationBell } from "@/components/Notifications"
+import { ApplicationModal } from "@/components/ApplicationModal"
 import { fetchAPI } from "@/lib/fetch"
 import { useUser } from "@clerk/clerk-expo"
 import { router } from "expo-router"
@@ -17,6 +18,7 @@ import {
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Toast from "react-native-toast-message"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 
 interface Job {
   id: string
@@ -42,12 +44,54 @@ const Home = () => {
   const [isSearching, setIsSearching] = useState(false)
   const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set())
   const [applyingJobs, setApplyingJobs] = useState<Set<string>>(new Set())
+  const [modalVisible, setModalVisible] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null)
 
   useEffect(() => {
     if (isSignedIn === false) {
       router.replace("/")
     }
   }, [isSignedIn])
+
+  const loadAppliedJobs = async () => {
+    try {
+      if (!user?.id) return
+      
+      // Load from AsyncStorage first for instant UI update
+      const stored = await AsyncStorage.getItem(`appliedJobs_${user.id}`)
+      if (stored) {
+        const jobIds = JSON.parse(stored)
+        setAppliedJobs(new Set(jobIds))
+        console.log(`[Apply] Loaded ${jobIds.length} applied jobs from storage`)
+      }
+      
+      // Then fetch from API to get latest state
+      try {
+        const token = await user.getIdToken()
+        const response = await fetch(`https://quickhands-api.vercel.app/api/applications/my`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && Array.isArray(data.data)) {
+            const appliedJobIds = data.data.map((app: any) => String(app.jobId))
+            setAppliedJobs(new Set(appliedJobIds))
+            // Update storage
+            await AsyncStorage.setItem(`appliedJobs_${user.id}`, JSON.stringify(appliedJobIds))
+            console.log(`[Apply] Loaded ${appliedJobIds.length} applied jobs from API`)
+          }
+        }
+      } catch (apiError) {
+        console.warn('[Apply] Could not fetch applications from API:', apiError)
+        // Continue with storage data if API fails
+      }
+    } catch (e) {
+      console.error("Error loading applied jobs", e)
+    }
+  }
 
   const fetchUserSkills = async () => {
     try {
@@ -139,8 +183,11 @@ const Home = () => {
   }
 
   useEffect(() => {
-    fetchUserSkills()
-    fetchJobs()
+    if (user?.id) {
+      loadAppliedJobs()
+      fetchUserSkills()
+      fetchJobs()
+    }
   }, [user])
 
   useEffect(() => {
@@ -157,37 +204,81 @@ const Home = () => {
 
     if (appliedJobs.has(job.id)) return
 
-    setApplyingJobs((s) => new Set(s).add(job.id))
+    // Show modal for quotation and conditions
+    setSelectedJob(job)
+    setModalVisible(true)
+  }
+
+  const submitApplication = async (applicationData: { quotation: string; conditions: string }) => {
+    if (!selectedJob || !user?.id) return
+
+    setApplyingJobs((s) => new Set(s).add(selectedJob.id))
 
     try {
-      await fetch(`https://quickhands-api.vercel.app/api/jobs/${job.id}/apply`, {
+      const response = await fetch(`https://quickhands-api.vercel.app/api/jobs/${selectedJob.id}/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.id,
-          jobId: job.id,
+          jobId: selectedJob.id,
           userName: user.firstName || "Freelancer",
           userEmail: user.primaryEmailAddress?.emailAddress,
+          quotation: applicationData.quotation,
+          conditions: applicationData.conditions,
         }),
       })
-    } catch {}
 
-    setAppliedJobs((s) => new Set(s).add(job.id))
-    setApplyingJobs((s) => {
-      const next = new Set(s)
-      next.delete(job.id)
-      return next
-    })
+      let data
+      try {
+        data = await response.json()
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError)
+        throw new Error('Server error. Please contact support or try again later.')
+      }
 
-    Toast.show({
-  type: "success",
-  text1: "Applied successfully 🎉",
-  text2: "The client has been notified",
-  position: "bottom",
-  visibilityTime: 3000,
-  autoHide: true,
-})
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to apply")
+      }
 
+      // Add to applied jobs and save to storage
+      setAppliedJobs((s) => {
+        const updated = new Set(s).add(selectedJob.id)
+        // Save to AsyncStorage
+        AsyncStorage.setItem(`appliedJobs_${user.id}`, JSON.stringify(Array.from(updated)))
+          .catch(err => console.warn('Failed to save to storage:', err))
+        return updated
+      })
+      
+      // Handle duplicate application message
+      const message = data.alreadyApplied 
+        ? "You've already applied to this job" 
+        : "The client has been notified"
+      
+      Toast.show({
+        type: "success",
+        text1: data.alreadyApplied ? "Already applied" : "Applied successfully 🎉",
+        text2: message,
+        position: "bottom",
+        visibilityTime: 3000,
+        autoHide: true,
+      })
+    } catch (error) {
+      console.error("Apply error:", error)
+      Toast.show({
+        type: "error",
+        text1: "Application failed",
+        text2: error instanceof Error ? error.message : "Please try again",
+        position: "bottom",
+        visibilityTime: 3000,
+        autoHide: true,
+      })
+    } finally {
+      setApplyingJobs((s) => {
+        const next = new Set(s)
+        next.delete(selectedJob.id)
+        return next
+      })
+    }
   }
 
   const timeAgo = (date: string) => {
@@ -448,6 +539,17 @@ const Home = () => {
           <IncomeCard />
         </View>
       </ScrollView>
+
+      {/* Application Modal */}
+      {selectedJob && (
+        <ApplicationModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          onSubmit={submitApplication}
+          jobTitle={selectedJob.title}
+          jobBudget={selectedJob.budget}
+        />
+      )}
     </SafeAreaView>
   )
 }

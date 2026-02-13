@@ -11,7 +11,6 @@ import {
   RefreshControl 
 } from "react-native"
 import { BellIcon } from "react-native-heroicons/outline"
-import { io, type Socket } from "socket.io-client"
 
 interface Notification {
   id: number
@@ -31,7 +30,6 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
   const [unreadCount, setUnreadCount] = useState(0)
   const [modalVisible, setModalVisible] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [socket, setSocket] = useState<Socket | null>(null)
 
 
   const fetchNotifications = useCallback(async () => {
@@ -55,57 +53,21 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
   }, [userId])
 
   
+  // Poll for notifications every 10 seconds
   useEffect(() => {
-    const newSocket = io("https://quickhands-api.vercel.app", {
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-    })
+    if (!userId) return
 
-    newSocket.on("connect", () => {
-      console.log("[v0] Socket connected:", newSocket.id)
-      newSocket.emit("join", userId)
-    })
-
-    newSocket.on("reconnect", () => {
-      console.log("[v0] Socket reconnected:", newSocket.id)
-      newSocket.emit("join", userId)
-    })
-
-    newSocket.on("disconnect", () => {
-      console.log("[v0] Socket disconnected")
-    })
-
-    // ✅ Handle new notifications (avoid duplicates)
-    newSocket.on("newNotification", (notification: Notification) => {
-      setNotifications((prev) => {
-        const exists = prev.some((n) => n.id === notification.id)
-        if (exists) return prev
-        return [notification, ...prev]
-      })
-      if (!notification.read) setUnreadCount((prev) => prev + 1)
-    })
-
-    newSocket.on("notificationRead", (notificationId: number) => {
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
-      )
-      setUnreadCount((prev) => Math.max(0, prev - 1))
-    })
-
-    setSocket(newSocket)
-
-    return () => {
-      newSocket.off("newNotification")
-      newSocket.off("notificationRead")
-      newSocket.disconnect()
-    }
-  }, [userId])
-
-  useEffect(() => {
+    // Initial fetch
     fetchNotifications()
-  }, [fetchNotifications])
+
+    // Set up polling interval
+    const interval = setInterval(() => {
+      fetchNotifications()
+    }, 10000) // Poll every 10 seconds
+
+    return () => clearInterval(interval)
+  }, [userId, fetchNotifications])
+
 
   // ✅ Mark notification as read
   const markAsRead = async (notificationId: number) => {
@@ -120,7 +82,6 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
           prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
         )
         setUnreadCount((prev) => Math.max(0, prev - 1))
-        socket?.emit("markAsRead", notificationId)
       }
     } catch (error) {
       console.error("[v0] Error marking notification as read:", error)
