@@ -22,6 +22,7 @@ const TabIcon = ({
   source,
   Icon,
   focused,
+  label,
 }: {
   source?: ImageSourcePropType
   Icon?: React.ComponentType<{
@@ -30,33 +31,63 @@ const TabIcon = ({
     strokeWidth?: number
   }>
   focused: boolean
+  label: string
 }) => (
-  <View className="flex items-center justify-center" style={{ paddingTop: 6 }}>
-    {/* Active indicator */}
-    <View
-      style={{
-        width: 28,
-        height: 3,
-        backgroundColor: focused ? "#000000" : "transparent",
-        borderRadius: 2,
-        marginBottom: 6,
-      }}
-    />
-
+  <View
+    style={{
+      alignItems: "center",
+      justifyContent: "center",
+      paddingTop: 4,
+      minWidth: 56,
+    }}
+  >
     {Icon ? (
-      <Icon
-        size={24}
-        color={focused ? "#000000" : "#9ca3af"}
-        strokeWidth={2}
-      />
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 14,
+          backgroundColor: focused ? "#111827" : "transparent",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Icon
+          size={20}
+          color={focused ? "#FFFFFF" : "#9CA3AF"}
+          strokeWidth={focused ? 2.5 : 1.8}
+        />
+      </View>
     ) : (
-      <Image
-        source={source}
-        tintColor={focused ? "#000000" : "#9ca3af"}
-        resizeMode="contain"
-        className="w-6 h-6"
-      />
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 14,
+          backgroundColor: focused ? "#111827" : "transparent",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Image
+          source={source}
+          tintColor={focused ? "#FFFFFF" : "#9CA3AF"}
+          resizeMode="contain"
+          style={{ width: 20, height: 20 }}
+        />
+      </View>
     )}
+    <Text
+      style={{
+        fontSize: 10,
+        fontWeight: focused ? "600" : "400",
+        color: focused ? "#111827" : "#9CA3AF",
+        marginTop: 4,
+        letterSpacing: 0.2,
+      }}
+    >
+      {label}
+    </Text>
   </View>
 )
 
@@ -92,9 +123,35 @@ export default function Layout() {
 
   if (!isLoaded) {
     return (
-      <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#111827" />
-        <Text className="text-gray-500 text-sm mt-4 font-semibold">
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#FAFAFA",
+        }}
+      >
+        <View
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 16,
+            backgroundColor: "#111827",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+          }}
+        >
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        </View>
+        <Text
+          style={{
+            color: "#6B7280",
+            fontSize: 13,
+            fontWeight: "500",
+            letterSpacing: 0.3,
+          }}
+        >
           Loading...
         </Text>
       </View>
@@ -107,17 +164,16 @@ export default function Layout() {
       screenOptions={{
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: "#ffffff",
-          borderTopWidth: 1,
-          borderTopColor: "#e5e7eb",
-          paddingBottom: Platform.OS === "ios" ? 24 : 12,
-          paddingTop: 8,
-          height: Platform.OS === "ios" ? 88 : 76,
+          backgroundColor: "#FFFFFF",
+          borderTopWidth: 0,
+          paddingBottom: Platform.OS === "ios" ? 24 : 10,
+          paddingTop: 6,
+          height: Platform.OS === "ios" ? 82 : 68,
           shadowColor: "#000",
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 8,
-          elevation: 8,
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.04,
+          shadowRadius: 16,
+          elevation: 12,
         },
       }}
     >
@@ -127,29 +183,28 @@ export default function Layout() {
         options={{
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={icons.home} focused={focused} />
+            <TabIcon source={icons.home} focused={focused} label="Home" />
           ),
         }}
       />
 
-      
       <Tabs.Screen
         name="chat"
         options={{
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={icons.chat} focused={focused} />
+            <TabIcon source={icons.chat} focused={focused} label="Chat" />
           ),
         }}
       />
 
-      {/* Profile — no header */}
+      {/* Profile */}
       <Tabs.Screen
         name="profile"
         options={{
           headerShown: false,
           tabBarIcon: ({ focused }) => (
-            <TabIcon source={icons.profile} focused={focused} />
+            <TabIcon source={icons.profile} focused={focused} label="Profile" />
           ),
         }}
       />
@@ -162,6 +217,7 @@ export default function Layout() {
             <TabIcon
               Icon={ArrowUpOnSquareStackIcon}
               focused={focused}
+              label="Train"
             />
           ),
         }}

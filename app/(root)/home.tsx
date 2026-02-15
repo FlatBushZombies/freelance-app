@@ -256,7 +256,7 @@ const Home = () => {
       
       Toast.show({
         type: "success",
-        text1: data.alreadyApplied ? "Already applied" : "Applied successfully 🎉",
+        text1: data.alreadyApplied ? "Already applied" : "Applied successfully",
         text2: message,
         position: "bottom",
         visibilityTime: 3000,
@@ -288,218 +288,510 @@ const Home = () => {
     return "Just now"
   }
 
-  const renderJobCard = ({ item }: { item: Job }) => (
-    <View className="bg-white rounded-3xl p-6 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 8 }}>
-      {/* Header with user info */}
-      <View className="flex-row items-center justify-between mb-4">
-        <View className="flex-row items-center flex-1">
-          <View className="w-12 h-12 rounded-full bg-gray-200 items-center justify-center mr-3">
-            <Text className="text-lg font-bold text-gray-600">{item.clientName.charAt(0)}</Text>
-          </View>
-          <View className="flex-1">
-            <Text className="text-base font-bold text-gray-900">{item.clientName}</Text>
-            <Text className="text-xs text-gray-500">Posted {timeAgo(item.createdAt)}</Text>
-          </View>
-        </View>
-        <TouchableOpacity className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center">
-          <Text className="text-lg">🤍</Text>
-        </TouchableOpacity>
-      </View>
+  /* ─────────────────── Job Card ─────────────────── */
+  const renderJobCard = ({ item }: { item: Job }) => {
+    const isApplied = appliedJobs.has(item.id)
+    const isApplying = applyingJobs.has(item.id)
+    const tags = item.category.split(",").slice(0, 3)
 
-      {/* Job title */}
-      <Text className="text-xl font-bold text-gray-900 mb-2 leading-7">{item.title}</Text>
-
-      {/* Description */}
-      <Text className="text-sm text-gray-600 mb-4 leading-5" numberOfLines={2}>
-        {item.description}
-      </Text>
-
-      {/* Tags */}
-      <View className="flex-row flex-wrap gap-2 mb-5">
-        {item.category
-          .split(",")
-          .slice(0, 4)
-          .map((tag, i) => (
-            <View key={i} className="px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100">
-              <Text className="text-xs font-semibold text-indigo-700">{tag.trim()}</Text>
-            </View>
-          ))}
-      </View>
-
-      {/* Budget */}
-      <View className="border-t border-gray-100 pt-4 mb-4">
-        <Text className="text-3xl font-bold text-gray-900 mb-1">${item.budget}/h</Text>
-        <Text className="text-sm text-gray-500">Hourly rate • {item.location}</Text>
-      </View>
-
-      {/* Apply button */}
-      <TouchableOpacity
-        onPress={() => handleApply(item)}
-        disabled={appliedJobs.has(item.id) || applyingJobs.has(item.id)}
-        activeOpacity={0.85}
-        className={`w-full py-4 rounded-2xl items-center justify-center ${
-          appliedJobs.has(item.id) ? "bg-green-500" : "bg-blue-600"
-        }`}
-        style={{ shadowColor: appliedJobs.has(item.id) ? "#10B981" : "#2563EB", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 6 }}
+    return (
+      <View
+        style={{
+          backgroundColor: "#FFFFFF",
+          borderRadius: 20,
+          padding: 20,
+          marginBottom: 14,
+          borderWidth: 1,
+          borderColor: item.isMatch ? "#D1FAE5" : "#F3F4F6",
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.04,
+          shadowRadius: 12,
+          elevation: 3,
+        }}
       >
-        {applyingJobs.has(item.id) ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <View className="flex-row items-center">
-            <Text className="text-white text-base font-bold mr-2">
-              {appliedJobs.has(item.id) ? "✓ Applied" : "⚡ Apply"}
+        {/* Match badge */}
+        {item.isMatch && (
+          <View
+            style={{
+              position: "absolute",
+              top: 16,
+              right: 16,
+              backgroundColor: "#ECFDF5",
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ fontSize: 11, fontWeight: "600", color: "#059669" }}>
+              Match
             </Text>
           </View>
         )}
-      </TouchableOpacity>
-    </View>
-  )
 
+        {/* Client row */}
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
+          <View
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 12,
+              backgroundColor: "#F3F4F6",
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 12,
+            }}
+          >
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#6B7280" }}>
+              {item.clientName.charAt(0)}
+            </Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: "#111827" }}>
+              {item.clientName}
+            </Text>
+            <Text style={{ fontSize: 11, color: "#9CA3AF", marginTop: 1 }}>
+              {timeAgo(item.createdAt)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Title */}
+        <Text
+          style={{
+            fontSize: 17,
+            fontWeight: "700",
+            color: "#111827",
+            marginBottom: 6,
+            lineHeight: 22,
+            letterSpacing: -0.2,
+          }}
+        >
+          {item.title}
+        </Text>
+
+        {/* Description */}
+        <Text
+          numberOfLines={2}
+          style={{
+            fontSize: 13,
+            color: "#6B7280",
+            lineHeight: 19,
+            marginBottom: 14,
+          }}
+        >
+          {item.description}
+        </Text>
+
+        {/* Tags */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+          {tags.map((tag, i) => (
+            <View
+              key={i}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 8,
+                backgroundColor: "#F9FAFB",
+                borderWidth: 1,
+                borderColor: "#E5E7EB",
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: "500", color: "#374151" }}>
+                {tag.trim()}
+              </Text>
+            </View>
+          ))}
+          {item.location && (
+            <View
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 8,
+                backgroundColor: "#F9FAFB",
+                borderWidth: 1,
+                borderColor: "#E5E7EB",
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: "500", color: "#374151" }}>
+                {item.location}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Bottom row: budget + button */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderTopWidth: 1,
+            borderTopColor: "#F3F4F6",
+            paddingTop: 14,
+          }}
+        >
+          <View>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: "#111827", letterSpacing: -0.5 }}>
+              {"$"}{item.budget}
+              <Text style={{ fontSize: 13, fontWeight: "500", color: "#9CA3AF" }}>/hr</Text>
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => handleApply(item)}
+            disabled={isApplied || isApplying}
+            activeOpacity={0.8}
+            style={{
+              paddingHorizontal: 24,
+              paddingVertical: 11,
+              borderRadius: 12,
+              backgroundColor: isApplied ? "#F0FDF4" : "#111827",
+              borderWidth: isApplied ? 1 : 0,
+              borderColor: "#BBF7D0",
+            }}
+          >
+            {isApplying ? (
+              <ActivityIndicator size="small" color={isApplied ? "#059669" : "#FFFFFF"} />
+            ) : (
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: "700",
+                  color: isApplied ? "#059669" : "#FFFFFF",
+                  letterSpacing: 0.2,
+                }}
+              >
+                {isApplied ? "Applied" : "Apply Now"}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    )
+  }
+
+  /* ─────────────────── Stats Card ─────────────────── */
   const StatsCard = () => (
-    <View className="bg-gray-900 rounded-3xl p-6 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.3, shadowRadius: 24, elevation: 12 }}>
-      <View className="flex-row items-center justify-between mb-6">
-        <Text className="text-white text-xl font-bold">Stats</Text>
-        <View className="bg-gray-800 px-4 py-2 rounded-xl">
-          <Text className="text-white text-sm">All Time ▾</Text>
+    <View
+      style={{
+        backgroundColor: "#111827",
+        borderRadius: 20,
+        padding: 22,
+        marginBottom: 14,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+        elevation: 10,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "700", letterSpacing: -0.2 }}>
+          Overview
+        </Text>
+        <View
+          style={{
+            backgroundColor: "rgba(255,255,255,0.08)",
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 8,
+          }}
+        >
+          <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: "500" }}>
+            All Time
+          </Text>
         </View>
       </View>
 
       {/* Earnings */}
-      <Text className="text-gray-400 text-sm mb-2">Earnings</Text>
-      <Text className="text-white text-5xl font-bold mb-1">
-        $9,787<Text className="text-gray-600">.32</Text>
+      <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "500", marginBottom: 6, letterSpacing: 0.5, textTransform: "uppercase" }}>
+        Earnings
       </Text>
-      <Text className="text-green-500 text-sm font-semibold mb-6">+$2,456.12 since last month</Text>
+      <Text style={{ color: "#FFFFFF", fontSize: 36, fontWeight: "800", marginBottom: 4, letterSpacing: -1 }}>
+        $9,787
+        <Text style={{ color: "rgba(255,255,255,0.25)" }}>.32</Text>
+      </Text>
+      <Text style={{ color: "#34D399", fontSize: 13, fontWeight: "600", marginBottom: 22 }}>
+        +$2,456.12 this month
+      </Text>
 
-      {/* Projects and Clients */}
-      <View className="flex-row gap-3 mb-6">
-        <View className="flex-1 bg-gray-800 rounded-2xl p-4">
-          <Text className="text-white text-3xl font-bold mb-1">36</Text>
-          <Text className="text-gray-400 text-sm">projects</Text>
-          <Text className="text-gray-500 text-xs mt-1">5 this month</Text>
+      {/* Projects & Clients */}
+      <View style={{ flexDirection: "row", gap: 10, marginBottom: 18 }}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(255,255,255,0.06)",
+            borderRadius: 14,
+            padding: 16,
+          }}
+        >
+          <Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "800", marginBottom: 2 }}>36</Text>
+          <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "500" }}>Projects</Text>
+          <Text style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginTop: 4 }}>5 this month</Text>
         </View>
-        <View className="flex-1 bg-gray-800 rounded-2xl p-4">
-          <Text className="text-white text-3xl font-bold mb-1">10</Text>
-          <Text className="text-gray-400 text-sm">clients</Text>
-          <Text className="text-gray-500 text-xs mt-1">3 this month</Text>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(255,255,255,0.06)",
+            borderRadius: 14,
+            padding: 16,
+          }}
+        >
+          <Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "800", marginBottom: 2 }}>10</Text>
+          <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "500" }}>Clients</Text>
+          <Text style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginTop: 4 }}>3 this month</Text>
         </View>
       </View>
 
-      {/* Achievement badge */}
-      <View className="bg-white rounded-2xl p-4 mb-6">
-        <View className="flex-row items-center justify-between">
-          <View>
-            <Text className="text-gray-900 text-2xl font-bold">5th place</Text>
-            <Text className="text-gray-600 text-sm">top-hire freelances</Text>
-          </View>
-          <Text className="text-4xl">🏆</Text>
+      {/* Achievement */}
+      <View
+        style={{
+          backgroundColor: "#FFFFFF",
+          borderRadius: 14,
+          padding: 16,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 18,
+        }}
+      >
+        <View>
+          <Text style={{ color: "#111827", fontSize: 20, fontWeight: "800" }}>5th place</Text>
+          <Text style={{ color: "#6B7280", fontSize: 12, fontWeight: "500", marginTop: 2 }}>Top-hire freelancers</Text>
+        </View>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            backgroundColor: "#FEF3C7",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ fontSize: 22 }}>{"🏆"}</Text>
         </View>
       </View>
 
       {/* Availability */}
-      <Text className="text-white text-base font-semibold mb-3">Availability</Text>
-      <View className="flex-row gap-1 mb-2">
+      <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600", marginBottom: 10 }}>
+        Availability
+      </Text>
+      <View style={{ flexDirection: "row", gap: 2, marginBottom: 8 }}>
         {[...Array(30)].map((_, i) => {
-          const colors = [
-            "bg-blue-500",
-            "bg-blue-600",
-            "bg-indigo-500",
-            "bg-indigo-600",
-            "bg-purple-500",
-            "bg-purple-600",
-            "bg-pink-500",
-            "bg-pink-600",
-            "bg-rose-500",
-            "bg-orange-500",
-            "bg-gray-700",
-            "bg-gray-800",
-          ]
-          const colorIndex = Math.floor((i / 30) * colors.length)
-          return <View key={i} className={`flex-1 h-12 rounded ${colors[colorIndex]}`} />
+          const opacity = 0.15 + (i / 30) * 0.85
+          return (
+            <View
+              key={i}
+              style={{
+                flex: 1,
+                height: 32,
+                borderRadius: 4,
+                backgroundColor: `rgba(99, 102, 241, ${opacity})`,
+              }}
+            />
+          )
         })}
       </View>
-      <Text className="text-gray-400 text-sm">100h/month</Text>
+      <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, fontWeight: "500" }}>
+        100h/month
+      </Text>
     </View>
   )
 
+  /* ─────────────────── CTA Card ─────────────────── */
   const CTACard = () => (
-    <View className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-6 mb-4 border-2 border-purple-100" style={{ shadowColor: "#A855F7", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 8 }}>
-      <View className="items-center mb-4">
-        <Text className="text-6xl mb-4">🔗</Text>
-        <Text className="text-2xl font-bold text-gray-900 text-center mb-2">Get new clients 2x faster</Text>
-        <Text className="text-sm text-gray-600 text-center px-4">
-          Join us today and unlock opportunities to land new clients twice as fast!
-        </Text>
+    <View
+      style={{
+        backgroundColor: "#F9FAFB",
+        borderRadius: 20,
+        padding: 24,
+        marginBottom: 14,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        alignItems: "center",
+      }}
+    >
+      <View
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 16,
+          backgroundColor: "#111827",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 16,
+        }}
+      >
+        <Text style={{ fontSize: 24, color: "#FFFFFF" }}>{"🔗"}</Text>
       </View>
-      <TouchableOpacity className="bg-gray-900 py-4 rounded-2xl items-center" activeOpacity={0.85} style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 6 }}>
-        <Text className="text-white text-base font-bold">Join now</Text>
+      <Text
+        style={{
+          fontSize: 20,
+          fontWeight: "800",
+          color: "#111827",
+          textAlign: "center",
+          marginBottom: 8,
+          letterSpacing: -0.3,
+        }}
+      >
+        Get new clients 2x faster
+      </Text>
+      <Text
+        style={{
+          fontSize: 13,
+          color: "#6B7280",
+          textAlign: "center",
+          lineHeight: 19,
+          paddingHorizontal: 16,
+          marginBottom: 20,
+        }}
+      >
+        Join us today and unlock opportunities to land new clients twice as fast!
+      </Text>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={{
+          backgroundColor: "#111827",
+          paddingVertical: 14,
+          paddingHorizontal: 32,
+          borderRadius: 14,
+          width: "100%",
+          alignItems: "center",
+        }}
+      >
+        <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700", letterSpacing: 0.2 }}>
+          Join now
+        </Text>
       </TouchableOpacity>
     </View>
   )
 
+  /* ─────────────────── Income Card ─────────────────── */
   const IncomeCard = () => (
-    <View className="bg-white rounded-3xl p-6" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 8 }}>
-      <View className="flex-row items-center justify-between mb-6">
-        <Text className="text-gray-900 text-xl font-bold">Income</Text>
-        <View className="bg-gray-100 px-4 py-2 rounded-xl">
-          <Text className="text-gray-900 text-sm">Monthly ▾</Text>
+    <View
+      style={{
+        backgroundColor: "#FFFFFF",
+        borderRadius: 20,
+        padding: 22,
+        borderWidth: 1,
+        borderColor: "#F3F4F6",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+        elevation: 3,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+        <Text style={{ color: "#111827", fontSize: 17, fontWeight: "700", letterSpacing: -0.2 }}>
+          Income
+        </Text>
+        <View
+          style={{
+            backgroundColor: "#F3F4F6",
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 8,
+          }}
+        >
+          <Text style={{ color: "#6B7280", fontSize: 12, fontWeight: "500" }}>Monthly</Text>
         </View>
       </View>
 
       {/* April */}
-      <View className="mb-6">
-        <Text className="text-2xl font-bold text-gray-900 mb-1">$2,167.56</Text>
-        <Text className="text-gray-500 text-sm mb-3">April</Text>
-        <View className="flex-row gap-1">
-          <View className="bg-blue-500 h-2 rounded-full" style={{ width: "30%" }} />
-          <View className="bg-pink-400 h-2 rounded-full" style={{ width: "25%" }} />
-          <View className="bg-yellow-400 h-2 rounded-full" style={{ width: "20%" }} />
-          <View className="bg-orange-500 h-2 rounded-full" style={{ width: "15%" }} />
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ fontSize: 24, fontWeight: "800", color: "#111827", letterSpacing: -0.5, marginBottom: 2 }}>
+          $2,167.56
+        </Text>
+        <Text style={{ color: "#9CA3AF", fontSize: 12, fontWeight: "500", marginBottom: 10 }}>April</Text>
+        <View style={{ flexDirection: "row", gap: 3, height: 6, borderRadius: 3, overflow: "hidden" }}>
+          <View style={{ backgroundColor: "#6366F1", width: "30%", borderRadius: 3 }} />
+          <View style={{ backgroundColor: "#EC4899", width: "25%", borderRadius: 3 }} />
+          <View style={{ backgroundColor: "#F59E0B", width: "20%", borderRadius: 3 }} />
+          <View style={{ backgroundColor: "#F97316", width: "15%", borderRadius: 3 }} />
         </View>
       </View>
 
       {/* March */}
       <View>
-        <Text className="text-2xl font-bold text-gray-900 mb-1">$1,367.50</Text>
-        <Text className="text-gray-500 text-sm mb-3">March</Text>
-        <View className="flex-row gap-1">
-          <View className="bg-blue-500 h-2 rounded-full" style={{ width: "20%" }} />
-          <View className="bg-pink-400 h-2 rounded-full" style={{ width: "40%" }} />
-          <View className="bg-yellow-400 h-2 rounded-full" style={{ width: "30%" }} />
-          <View className="bg-orange-500 h-2 rounded-full" style={{ width: "5%" }} />
+        <Text style={{ fontSize: 24, fontWeight: "800", color: "#111827", letterSpacing: -0.5, marginBottom: 2 }}>
+          $1,367.50
+        </Text>
+        <Text style={{ color: "#9CA3AF", fontSize: 12, fontWeight: "500", marginBottom: 10 }}>March</Text>
+        <View style={{ flexDirection: "row", gap: 3, height: 6, borderRadius: 3, overflow: "hidden" }}>
+          <View style={{ backgroundColor: "#6366F1", width: "20%", borderRadius: 3 }} />
+          <View style={{ backgroundColor: "#EC4899", width: "40%", borderRadius: 3 }} />
+          <View style={{ backgroundColor: "#F59E0B", width: "30%", borderRadius: 3 }} />
+          <View style={{ backgroundColor: "#F97316", width: "5%", borderRadius: 3 }} />
         </View>
       </View>
     </View>
   )
 
+  /* ─────────────────── Loading State ─────────────────── */
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#111827" />
-        <Text className="text-gray-500 text-sm mt-4 font-semibold">Loading jobs...</Text>
+      <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FAFAFA" }}>
+        <View
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 14,
+            backgroundColor: "#111827",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 14,
+          }}
+        >
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        </View>
+        <Text style={{ color: "#6B7280", fontSize: 13, fontWeight: "500" }}>Loading jobs...</Text>
       </SafeAreaView>
     )
   }
 
+  /* ─────────────────── Main Render ─────────────────── */
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FAFAFA" }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchJobs} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchJobs} tintColor="#111827" />}
       >
-        {/* Header */}
-        <View className="px-6 pt-6 pb-4">
-          <View className="flex-row justify-between items-center mb-6">
+        {/* ── Header ── */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
             <View>
-              <Text className="text-gray-500 text-sm">Welcome back,</Text>
-              <Text className="text-3xl font-bold text-gray-900">{user?.firstName || "Freelancer"}</Text>
+              <Text style={{ color: "#9CA3AF", fontSize: 13, fontWeight: "500", marginBottom: 2 }}>
+                Welcome back,
+              </Text>
+              <Text style={{ fontSize: 26, fontWeight: "800", color: "#111827", letterSpacing: -0.5 }}>
+                {user?.firstName || "Freelancer"}
+              </Text>
             </View>
             {user?.id && <NotificationBell userId={user.id} />}
           </View>
 
-          {/* Search */}
-          <View className="bg-white rounded-2xl px-5 py-4 flex-row items-center" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4 }}>
-            <Text className="text-gray-400 mr-3 text-lg">🔍</Text>
+          {/* ── Search ── */}
+          <View
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: 14,
+              paddingHorizontal: 16,
+              paddingVertical: 13,
+              flexDirection: "row",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: "#E5E7EB",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.03,
+              shadowRadius: 8,
+              elevation: 2,
+            }}
+          >
+            <Text style={{ color: "#9CA3AF", marginRight: 10, fontSize: 16 }}>{"🔍"}</Text>
             <TextInput
               value={searchQuery}
               onChangeText={(t) => {
@@ -508,26 +800,66 @@ const Home = () => {
               }}
               placeholder="Search jobs or skills..."
               placeholderTextColor="#9CA3AF"
-              className="flex-1 text-base text-gray-900"
+              style={{
+                flex: 1,
+                fontSize: 14,
+                color: "#111827",
+                fontWeight: "500",
+              }}
             />
-            {isSearching && <ActivityIndicator size="small" color="#4F46E5" />}
+            {isSearching && <ActivityIndicator size="small" color="#6366F1" />}
           </View>
         </View>
 
-        {/* Dashboard Grid */}
-        <View className="px-6 pb-8">
-          {/* Jobs List */}
-          <View className="mb-6">
-            <Text className="text-xl font-bold text-gray-900 mb-4">Available Jobs</Text>
-            {jobs.length === 0 ? (
-              <View className="bg-white rounded-3xl p-8 items-center">
-                <Text className="text-4xl mb-3">💼</Text>
-                <Text className="text-gray-500 text-center">No jobs found. Try adjusting your search.</Text>
-              </View>
-            ) : (
-              jobs.map((job) => <View key={job.id}>{renderJobCard({ item: job })}</View>)
-            )}
+        {/* ── Content ── */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 }}>
+          {/* Section header */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <Text style={{ fontSize: 18, fontWeight: "700", color: "#111827", letterSpacing: -0.2 }}>
+              Available Jobs
+            </Text>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: "#6366F1" }}>
+              {jobs.length} {jobs.length === 1 ? "job" : "jobs"}
+            </Text>
           </View>
+
+          {/* Jobs */}
+          {jobs.length === 0 ? (
+            <View
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: 20,
+                padding: 40,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: "#F3F4F6",
+              }}
+            >
+              <View
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 16,
+                  backgroundColor: "#F3F4F6",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 14,
+                }}
+              >
+                <Text style={{ fontSize: 24 }}>{"💼"}</Text>
+              </View>
+              <Text style={{ color: "#6B7280", textAlign: "center", fontSize: 14, fontWeight: "500" }}>
+                No jobs found. Try adjusting your search.
+              </Text>
+            </View>
+          ) : (
+            jobs.map((job) => (
+              <View key={job.id}>{renderJobCard({ item: job })}</View>
+            ))
+          )}
+
+          {/* Spacer between jobs and stats */}
+          <View style={{ height: 8 }} />
 
           {/* Stats Card */}
           <StatsCard />
