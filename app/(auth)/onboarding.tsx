@@ -49,7 +49,7 @@ const Onboarding = () => {
     const checkOnboarding = async () => {
       try {
         const res = await fetch(
-          `https://quickhands-api.vercel.app/api/user/${user.id}`
+          `https://quickhands-api.vercel.app/api/user/get?clerkId=${user.id}`
         );
         const data = await res.json();
         

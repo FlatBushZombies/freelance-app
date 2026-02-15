@@ -5,7 +5,7 @@ import { ApplicationModal } from "@/components/ApplicationModal"
 import { fetchAPI } from "@/lib/fetch"
 import { useUser } from "@clerk/clerk-expo"
 import { router } from "expo-router"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import {
   ActivityIndicator,
   Alert,
@@ -15,10 +15,15 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
+  Animated,
+  Dimensions,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Toast from "react-native-toast-message"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
 interface Job {
   id: string
@@ -46,6 +51,8 @@ const Home = () => {
   const [applyingJobs, setApplyingJobs] = useState<Set<string>>(new Set())
   const [modalVisible, setModalVisible] = useState(false)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  const [activeFilter, setActiveFilter] = useState("All")
+  const scrollY = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     if (isSignedIn === false) {
@@ -57,7 +64,6 @@ const Home = () => {
     try {
       if (!user?.id) return
       
-      // Load from AsyncStorage first for instant UI update
       const stored = await AsyncStorage.getItem(`appliedJobs_${user.id}`)
       if (stored) {
         const jobIds = JSON.parse(stored)
@@ -65,7 +71,6 @@ const Home = () => {
         console.log(`[Apply] Loaded ${jobIds.length} applied jobs from storage`)
       }
       
-      // Then fetch from API to get latest state
       try {
         const token = await user.getIdToken()
         const response = await fetch(`https://quickhands-api.vercel.app/api/applications/my`, {
@@ -79,14 +84,12 @@ const Home = () => {
           if (data.success && Array.isArray(data.data)) {
             const appliedJobIds = data.data.map((app: any) => String(app.jobId))
             setAppliedJobs(new Set(appliedJobIds))
-            // Update storage
             await AsyncStorage.setItem(`appliedJobs_${user.id}`, JSON.stringify(appliedJobIds))
             console.log(`[Apply] Loaded ${appliedJobIds.length} applied jobs from API`)
           }
         }
       } catch (apiError) {
         console.warn('[Apply] Could not fetch applications from API:', apiError)
-        // Continue with storage data if API fails
       }
     } catch (e) {
       console.error("Error loading applied jobs", e)
@@ -204,7 +207,6 @@ const Home = () => {
 
     if (appliedJobs.has(job.id)) return
 
-    // Show modal for quotation and conditions
     setSelectedJob(job)
     setModalVisible(true)
   }
@@ -240,16 +242,13 @@ const Home = () => {
         throw new Error(data.message || "Failed to apply")
       }
 
-      // Add to applied jobs and save to storage
       setAppliedJobs((s) => {
         const updated = new Set(s).add(selectedJob.id)
-        // Save to AsyncStorage
         AsyncStorage.setItem(`appliedJobs_${user.id}`, JSON.stringify(Array.from(updated)))
           .catch(err => console.warn('Failed to save to storage:', err))
         return updated
       })
       
-      // Handle duplicate application message
       const message = data.alreadyApplied 
         ? "You've already applied to this job" 
         : "The client has been notified"
@@ -288,6 +287,21 @@ const Home = () => {
     return "Just now"
   }
 
+  const filters = ["All", "Matched", "Recent", "High Budget"]
+
+  const getFilteredJobs = () => {
+    switch (activeFilter) {
+      case "Matched":
+        return jobs.filter((j) => j.isMatch)
+      case "Recent":
+        return [...jobs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      case "High Budget":
+        return [...jobs].sort((a, b) => b.budget - a.budget)
+      default:
+        return jobs
+    }
+  }
+
   /* ─────────────────── Job Card ─────────────────── */
   const renderJobCard = ({ item }: { item: Job }) => {
     const isApplied = appliedJobs.has(item.id)
@@ -295,179 +309,225 @@ const Home = () => {
     const tags = item.category.split(",").slice(0, 3)
 
     return (
-      <View
+      <TouchableOpacity
+        activeOpacity={0.97}
         style={{
           backgroundColor: "#FFFFFF",
           borderRadius: 20,
-          padding: 20,
           marginBottom: 14,
           borderWidth: 1,
-          borderColor: item.isMatch ? "#D1FAE5" : "#F3F4F6",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.04,
-          shadowRadius: 12,
-          elevation: 3,
+          borderColor: item.isMatch ? "rgba(16, 185, 129, 0.18)" : "rgba(0,0,0,0.04)",
+          overflow: "hidden",
+          ...Platform.select({
+            ios: {
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.05,
+              shadowRadius: 20,
+            },
+            android: { elevation: 3 },
+          }),
         }}
       >
-        {/* Match badge */}
-        {item.isMatch && (
-          <View
-            style={{
-              position: "absolute",
-              top: 16,
-              right: 16,
-              backgroundColor: "#ECFDF5",
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 8,
-            }}
-          >
-            <Text style={{ fontSize: 11, fontWeight: "600", color: "#059669" }}>
-              Match
-            </Text>
-          </View>
-        )}
-
-        {/* Client row */}
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
-          <View
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 12,
-              backgroundColor: "#F3F4F6",
-              alignItems: "center",
-              justifyContent: "center",
-              marginRight: 12,
-            }}
-          >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#6B7280" }}>
-              {item.clientName.charAt(0)}
-            </Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: "#111827" }}>
-              {item.clientName}
-            </Text>
-            <Text style={{ fontSize: 11, color: "#9CA3AF", marginTop: 1 }}>
-              {timeAgo(item.createdAt)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Title */}
-        <Text
-          style={{
-            fontSize: 17,
-            fontWeight: "700",
-            color: "#111827",
-            marginBottom: 6,
-            lineHeight: 22,
-            letterSpacing: -0.2,
-          }}
-        >
-          {item.title}
-        </Text>
-
-        {/* Description */}
-        <Text
-          numberOfLines={2}
-          style={{
-            fontSize: 13,
-            color: "#6B7280",
-            lineHeight: 19,
-            marginBottom: 14,
-          }}
-        >
-          {item.description}
-        </Text>
-
-        {/* Tags */}
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
-          {tags.map((tag, i) => (
-            <View
-              key={i}
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 8,
-                backgroundColor: "#F9FAFB",
-                borderWidth: 1,
-                borderColor: "#E5E7EB",
-              }}
-            >
-              <Text style={{ fontSize: 11, fontWeight: "500", color: "#374151" }}>
-                {tag.trim()}
-              </Text>
-            </View>
-          ))}
-          {item.location && (
+        <View style={{ padding: 20 }}>
+          {/* Row 1: Avatar + Client + Match + Time */}
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+            {/* Avatar circle */}
             <View
               style={{
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 8,
-                backgroundColor: "#F9FAFB",
-                borderWidth: 1,
-                borderColor: "#E5E7EB",
+                width: 42,
+                height: 42,
+                borderRadius: 21,
+                backgroundColor: item.isMatch ? "#F0FDF4" : "#F4F4F5",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: 12,
+                borderWidth: 1.5,
+                borderColor: item.isMatch ? "rgba(16, 185, 129, 0.2)" : "rgba(0,0,0,0.04)",
               }}
             >
-              <Text style={{ fontSize: 11, fontWeight: "500", color: "#374151" }}>
-                {item.location}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Bottom row: budget + button */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderTopWidth: 1,
-            borderTopColor: "#F3F4F6",
-            paddingTop: 14,
-          }}
-        >
-          <View>
-            <Text style={{ fontSize: 22, fontWeight: "800", color: "#111827", letterSpacing: -0.5 }}>
-              {"$"}{item.budget}
-              <Text style={{ fontSize: 13, fontWeight: "500", color: "#9CA3AF" }}>/hr</Text>
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={() => handleApply(item)}
-            disabled={isApplied || isApplying}
-            activeOpacity={0.8}
-            style={{
-              paddingHorizontal: 24,
-              paddingVertical: 11,
-              borderRadius: 12,
-              backgroundColor: isApplied ? "#F0FDF4" : "#111827",
-              borderWidth: isApplied ? 1 : 0,
-              borderColor: "#BBF7D0",
-            }}
-          >
-            {isApplying ? (
-              <ActivityIndicator size="small" color={isApplied ? "#059669" : "#FFFFFF"} />
-            ) : (
               <Text
                 style={{
-                  fontSize: 13,
+                  fontSize: 16,
                   fontWeight: "700",
-                  color: isApplied ? "#059669" : "#FFFFFF",
-                  letterSpacing: 0.2,
+                  color: item.isMatch ? "#059669" : "#71717A",
                 }}
               >
-                {isApplied ? "Applied" : "Apply Now"}
+                {item.clientName.charAt(0)}
               </Text>
+            </View>
+
+            {/* Client name + meta */}
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: "#18181B", letterSpacing: -0.1 }}>
+                {item.clientName}
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 3, gap: 5 }}>
+                <Text style={{ fontSize: 12, color: "#A1A1AA" }}>
+                  {item.location}
+                </Text>
+                <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#D4D4D8" }} />
+                <Text style={{ fontSize: 12, color: "#A1A1AA" }}>
+                  {timeAgo(item.createdAt)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Match badge */}
+            {item.isMatch && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  backgroundColor: "#F0FDF4",
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: "rgba(16, 185, 129, 0.12)",
+                }}
+              >
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#10B981" }} />
+                <Text style={{ fontSize: 11, fontWeight: "600", color: "#059669" }}>
+                  Match
+                </Text>
+              </View>
             )}
-          </TouchableOpacity>
+          </View>
+
+          {/* Title */}
+          <Text
+            style={{
+              fontSize: 17,
+              fontWeight: "700",
+              color: "#18181B",
+              marginBottom: 8,
+              lineHeight: 24,
+              letterSpacing: -0.3,
+            }}
+          >
+            {item.title}
+          </Text>
+
+          {/* Description */}
+          <Text
+            numberOfLines={2}
+            style={{
+              fontSize: 14,
+              color: "#71717A",
+              lineHeight: 21,
+              marginBottom: 16,
+              letterSpacing: 0.05,
+            }}
+          >
+            {item.description}
+          </Text>
+
+          {/* Tags */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 18 }}>
+            {tags.map((tag, i) => (
+              <View
+                key={i}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 8,
+                  backgroundColor: "#F4F4F5",
+                  borderWidth: 1,
+                  borderColor: "rgba(0,0,0,0.03)",
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: "500", color: "#52525B" }}>
+                  {tag.trim()}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Bottom bar: Budget + Apply */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              paddingTop: 16,
+              borderTopWidth: 1,
+              borderTopColor: "#F4F4F5",
+            }}
+          >
+            <View>
+              <Text style={{ fontSize: 11, fontWeight: "500", color: "#A1A1AA", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>
+                Budget
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+                <Text style={{ fontSize: 24, fontWeight: "800", color: "#18181B", letterSpacing: -0.8 }}>
+                  {"$"}{item.budget}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => handleApply(item)}
+              disabled={isApplied || isApplying}
+              activeOpacity={0.8}
+              style={{
+                paddingHorizontal: isApplied ? 20 : 28,
+                paddingVertical: 13,
+                borderRadius: 14,
+                backgroundColor: isApplied ? "#F0FDF4" : "#18181B",
+                borderWidth: isApplied ? 1 : 0,
+                borderColor: isApplied ? "rgba(16, 185, 129, 0.2)" : "transparent",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 7,
+                ...(!isApplied
+                  ? Platform.select({
+                      ios: {
+                        shadowColor: "#18181B",
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 8,
+                      },
+                      android: { elevation: 4 },
+                    })
+                  : {}),
+              }}
+            >
+              {isApplying ? (
+                <ActivityIndicator size="small" color={isApplied ? "#10B981" : "#FFFFFF"} />
+              ) : (
+                <>
+                  {isApplied && (
+                    <View
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        backgroundColor: "#10B981",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "800" }}>{"✓"}</Text>
+                    </View>
+                  )}
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "700",
+                      color: isApplied ? "#059669" : "#FFFFFF",
+                      letterSpacing: 0.1,
+                    }}
+                  >
+                    {isApplied ? "Applied" : "Apply Now"}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </TouchableOpacity>
     )
   }
 
@@ -475,72 +535,101 @@ const Home = () => {
   const StatsCard = () => (
     <View
       style={{
-        backgroundColor: "#111827",
-        borderRadius: 20,
-        padding: 22,
+        backgroundColor: "#18181B",
+        borderRadius: 24,
+        padding: 24,
         marginBottom: 14,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-        elevation: 10,
+        overflow: "hidden",
+        ...Platform.select({
+          ios: {
+            shadowColor: "#18181B",
+            shadowOffset: { width: 0, height: 12 },
+            shadowOpacity: 0.25,
+            shadowRadius: 28,
+          },
+          android: { elevation: 16 },
+        }),
       }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "700", letterSpacing: -0.2 }}>
-          Overview
-        </Text>
-        <View
-          style={{
-            backgroundColor: "rgba(255,255,255,0.08)",
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-            borderRadius: 8,
-          }}
-        >
-          <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: "500" }}>
-            All Time
+      {/* Header */}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#10B981" }} />
+          <Text style={{ color: "#FFFFFF", fontSize: 17, fontWeight: "700", letterSpacing: -0.3 }}>
+            Overview
           </Text>
         </View>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={{
+            backgroundColor: "rgba(255,255,255,0.08)",
+            paddingHorizontal: 14,
+            paddingVertical: 7,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.06)",
+          }}
+        >
+          <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "600" }}>
+            All Time
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Earnings */}
-      <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "500", marginBottom: 6, letterSpacing: 0.5, textTransform: "uppercase" }}>
+      <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, fontWeight: "600", marginBottom: 10, letterSpacing: 1.2, textTransform: "uppercase" }}>
         Earnings
       </Text>
-      <Text style={{ color: "#FFFFFF", fontSize: 36, fontWeight: "800", marginBottom: 4, letterSpacing: -1 }}>
+      <Text style={{ color: "#FFFFFF", fontSize: 42, fontWeight: "800", marginBottom: 8, letterSpacing: -2 }}>
         $9,787
-        <Text style={{ color: "rgba(255,255,255,0.25)" }}>.32</Text>
+        <Text style={{ color: "rgba(255,255,255,0.2)", fontSize: 28 }}>.32</Text>
       </Text>
-      <Text style={{ color: "#34D399", fontSize: 13, fontWeight: "600", marginBottom: 22 }}>
-        +$2,456.12 this month
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 32 }}>
+        <View style={{ backgroundColor: "rgba(16, 185, 129, 0.15)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+          <Text style={{ color: "#34D399", fontSize: 13, fontWeight: "700" }}>
+            +$2,456.12
+          </Text>
+        </View>
+        <Text style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, fontWeight: "500" }}>
+          this month
+        </Text>
+      </View>
 
       {/* Projects & Clients */}
       <View style={{ flexDirection: "row", gap: 10, marginBottom: 18 }}>
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(255,255,255,0.06)",
-            borderRadius: 14,
-            padding: 16,
+            backgroundColor: "rgba(255,255,255,0.05)",
+            borderRadius: 18,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.05)",
           }}
         >
-          <Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "800", marginBottom: 2 }}>36</Text>
-          <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "500" }}>Projects</Text>
-          <Text style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginTop: 4 }}>5 this month</Text>
+          <Text style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "800", marginBottom: 6, letterSpacing: -1 }}>36</Text>
+          <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: "600" }}>Projects</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, gap: 5 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#34D399" }} />
+            <Text style={{ color: "rgba(255,255,255,0.25)", fontSize: 12, fontWeight: "500" }}>5 this month</Text>
+          </View>
         </View>
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(255,255,255,0.06)",
-            borderRadius: 14,
-            padding: 16,
+            backgroundColor: "rgba(255,255,255,0.05)",
+            borderRadius: 18,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.05)",
           }}
         >
-          <Text style={{ color: "#FFFFFF", fontSize: 26, fontWeight: "800", marginBottom: 2 }}>10</Text>
-          <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "500" }}>Clients</Text>
-          <Text style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginTop: 4 }}>3 this month</Text>
+          <Text style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "800", marginBottom: 6, letterSpacing: -1 }}>10</Text>
+          <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontWeight: "600" }}>Clients</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, gap: 5 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#818CF8" }} />
+            <Text style={{ color: "rgba(255,255,255,0.25)", fontSize: 12, fontWeight: "500" }}>3 this month</Text>
+          </View>
         </View>
       </View>
 
@@ -548,8 +637,8 @@ const Home = () => {
       <View
         style={{
           backgroundColor: "#FFFFFF",
-          borderRadius: 14,
-          padding: 16,
+          borderRadius: 18,
+          padding: 20,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
@@ -557,46 +646,48 @@ const Home = () => {
         }}
       >
         <View>
-          <Text style={{ color: "#111827", fontSize: 20, fontWeight: "800" }}>5th place</Text>
-          <Text style={{ color: "#6B7280", fontSize: 12, fontWeight: "500", marginTop: 2 }}>Top-hire freelancers</Text>
+          <Text style={{ color: "#18181B", fontSize: 22, fontWeight: "800", letterSpacing: -0.5 }}>5th place</Text>
+          <Text style={{ color: "#A1A1AA", fontSize: 13, fontWeight: "500", marginTop: 3 }}>Top-hire freelancers</Text>
         </View>
         <View
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            backgroundColor: "#FEF3C7",
+            width: 50,
+            height: 50,
+            borderRadius: 16,
+            backgroundColor: "#FEF9EF",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Text style={{ fontSize: 22 }}>{"🏆"}</Text>
+          <Text style={{ fontSize: 24 }}>{"🏆"}</Text>
         </View>
       </View>
 
       {/* Availability */}
-      <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600", marginBottom: 10 }}>
-        Availability
-      </Text>
-      <View style={{ flexDirection: "row", gap: 2, marginBottom: 8 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600" }}>
+          Availability
+        </Text>
+        <Text style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, fontWeight: "500" }}>
+          100h/month
+        </Text>
+      </View>
+      <View style={{ flexDirection: "row", gap: 2 }}>
         {[...Array(30)].map((_, i) => {
-          const opacity = 0.15 + (i / 30) * 0.85
+          const opacity = 0.08 + (i / 30) * 0.92
           return (
             <View
               key={i}
               style={{
                 flex: 1,
                 height: 32,
-                borderRadius: 4,
+                borderRadius: 5,
                 backgroundColor: `rgba(99, 102, 241, ${opacity})`,
               }}
             />
           )
         })}
       </View>
-      <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, fontWeight: "500" }}>
-        100h/month
-      </Text>
     </View>
   )
 
@@ -604,48 +695,66 @@ const Home = () => {
   const CTACard = () => (
     <View
       style={{
-        backgroundColor: "#F9FAFB",
-        borderRadius: 20,
-        padding: 24,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 24,
+        padding: 32,
         marginBottom: 14,
         borderWidth: 1,
-        borderColor: "#E5E7EB",
+        borderColor: "rgba(0,0,0,0.04)",
         alignItems: "center",
+        ...Platform.select({
+          ios: {
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.04,
+            shadowRadius: 16,
+          },
+          android: { elevation: 2 },
+        }),
       }}
     >
       <View
         style={{
-          width: 56,
-          height: 56,
-          borderRadius: 16,
-          backgroundColor: "#111827",
+          width: 60,
+          height: 60,
+          borderRadius: 20,
+          backgroundColor: "#18181B",
           alignItems: "center",
           justifyContent: "center",
-          marginBottom: 16,
+          marginBottom: 20,
+          ...Platform.select({
+            ios: {
+              shadowColor: "#18181B",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 12,
+            },
+            android: { elevation: 6 },
+          }),
         }}
       >
-        <Text style={{ fontSize: 24, color: "#FFFFFF" }}>{"🔗"}</Text>
+        <Text style={{ fontSize: 26, color: "#FFFFFF" }}>{"🔗"}</Text>
       </View>
       <Text
         style={{
-          fontSize: 20,
+          fontSize: 22,
           fontWeight: "800",
-          color: "#111827",
+          color: "#18181B",
           textAlign: "center",
-          marginBottom: 8,
-          letterSpacing: -0.3,
+          marginBottom: 10,
+          letterSpacing: -0.5,
         }}
       >
         Get new clients 2x faster
       </Text>
       <Text
         style={{
-          fontSize: 13,
-          color: "#6B7280",
+          fontSize: 14,
+          color: "#71717A",
           textAlign: "center",
-          lineHeight: 19,
-          paddingHorizontal: 16,
-          marginBottom: 20,
+          lineHeight: 22,
+          paddingHorizontal: 8,
+          marginBottom: 28,
         }}
       >
         Join us today and unlock opportunities to land new clients twice as fast!
@@ -653,15 +762,24 @@ const Home = () => {
       <TouchableOpacity
         activeOpacity={0.85}
         style={{
-          backgroundColor: "#111827",
-          paddingVertical: 14,
+          backgroundColor: "#18181B",
+          paddingVertical: 16,
           paddingHorizontal: 32,
           borderRadius: 14,
           width: "100%",
           alignItems: "center",
+          ...Platform.select({
+            ios: {
+              shadowColor: "#18181B",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 8,
+            },
+            android: { elevation: 4 },
+          }),
         }}
       >
-        <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "700", letterSpacing: 0.2 }}>
+        <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700", letterSpacing: 0.1 }}>
           Join now
         </Text>
       </TouchableOpacity>
@@ -673,58 +791,87 @@ const Home = () => {
     <View
       style={{
         backgroundColor: "#FFFFFF",
-        borderRadius: 20,
-        padding: 22,
+        borderRadius: 24,
+        padding: 24,
         borderWidth: 1,
-        borderColor: "#F3F4F6",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
-        elevation: 3,
+        borderColor: "rgba(0,0,0,0.04)",
+        ...Platform.select({
+          ios: {
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.04,
+            shadowRadius: 16,
+          },
+          android: { elevation: 2 },
+        }),
       }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-        <Text style={{ color: "#111827", fontSize: 17, fontWeight: "700", letterSpacing: -0.2 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+        <Text style={{ color: "#18181B", fontSize: 17, fontWeight: "700", letterSpacing: -0.3 }}>
           Income
         </Text>
-        <View
+        <TouchableOpacity
+          activeOpacity={0.7}
           style={{
-            backgroundColor: "#F3F4F6",
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-            borderRadius: 8,
+            backgroundColor: "#F4F4F5",
+            paddingHorizontal: 14,
+            paddingVertical: 7,
+            borderRadius: 10,
           }}
         >
-          <Text style={{ color: "#6B7280", fontSize: 12, fontWeight: "500" }}>Monthly</Text>
-        </View>
+          <Text style={{ color: "#71717A", fontSize: 12, fontWeight: "600" }}>Monthly</Text>
+        </TouchableOpacity>
       </View>
 
       {/* April */}
-      <View style={{ marginBottom: 20 }}>
-        <Text style={{ fontSize: 24, fontWeight: "800", color: "#111827", letterSpacing: -0.5, marginBottom: 2 }}>
+      <View style={{ marginBottom: 28 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+          <Text style={{ color: "#A1A1AA", fontSize: 13, fontWeight: "600" }}>April</Text>
+          <View style={{ backgroundColor: "#F0FDF4", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+            <Text style={{ color: "#059669", fontSize: 11, fontWeight: "600" }}>+18%</Text>
+          </View>
+        </View>
+        <Text style={{ fontSize: 28, fontWeight: "800", color: "#18181B", letterSpacing: -0.8, marginBottom: 14 }}>
           $2,167.56
         </Text>
-        <Text style={{ color: "#9CA3AF", fontSize: 12, fontWeight: "500", marginBottom: 10 }}>April</Text>
-        <View style={{ flexDirection: "row", gap: 3, height: 6, borderRadius: 3, overflow: "hidden" }}>
-          <View style={{ backgroundColor: "#6366F1", width: "30%", borderRadius: 3 }} />
-          <View style={{ backgroundColor: "#EC4899", width: "25%", borderRadius: 3 }} />
-          <View style={{ backgroundColor: "#F59E0B", width: "20%", borderRadius: 3 }} />
-          <View style={{ backgroundColor: "#F97316", width: "15%", borderRadius: 3 }} />
+        <View style={{ flexDirection: "row", gap: 3, height: 10, borderRadius: 5, overflow: "hidden" }}>
+          <View style={{ backgroundColor: "#6366F1", width: "30%", borderRadius: 5 }} />
+          <View style={{ backgroundColor: "#EC4899", width: "25%", borderRadius: 5 }} />
+          <View style={{ backgroundColor: "#F59E0B", width: "20%", borderRadius: 5 }} />
+          <View style={{ backgroundColor: "#F97316", width: "15%", borderRadius: 5 }} />
+        </View>
+        {/* Legend */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 14 }}>
+          {[
+            { color: "#6366F1", label: "Design" },
+            { color: "#EC4899", label: "Dev" },
+            { color: "#F59E0B", label: "Consult" },
+            { color: "#F97316", label: "Other" },
+          ].map((item, i) => (
+            <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: item.color }} />
+              <Text style={{ fontSize: 11, color: "#A1A1AA", fontWeight: "500" }}>{item.label}</Text>
+            </View>
+          ))}
         </View>
       </View>
 
+      {/* Divider */}
+      <View style={{ height: 1, backgroundColor: "#F4F4F5", marginBottom: 28 }} />
+
       {/* March */}
       <View>
-        <Text style={{ fontSize: 24, fontWeight: "800", color: "#111827", letterSpacing: -0.5, marginBottom: 2 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+          <Text style={{ color: "#A1A1AA", fontSize: 13, fontWeight: "600" }}>March</Text>
+        </View>
+        <Text style={{ fontSize: 28, fontWeight: "800", color: "#18181B", letterSpacing: -0.8, marginBottom: 14 }}>
           $1,367.50
         </Text>
-        <Text style={{ color: "#9CA3AF", fontSize: 12, fontWeight: "500", marginBottom: 10 }}>March</Text>
-        <View style={{ flexDirection: "row", gap: 3, height: 6, borderRadius: 3, overflow: "hidden" }}>
-          <View style={{ backgroundColor: "#6366F1", width: "20%", borderRadius: 3 }} />
-          <View style={{ backgroundColor: "#EC4899", width: "40%", borderRadius: 3 }} />
-          <View style={{ backgroundColor: "#F59E0B", width: "30%", borderRadius: 3 }} />
-          <View style={{ backgroundColor: "#F97316", width: "5%", borderRadius: 3 }} />
+        <View style={{ flexDirection: "row", gap: 3, height: 10, borderRadius: 5, overflow: "hidden" }}>
+          <View style={{ backgroundColor: "#6366F1", width: "20%", borderRadius: 5 }} />
+          <View style={{ backgroundColor: "#EC4899", width: "40%", borderRadius: 5 }} />
+          <View style={{ backgroundColor: "#F59E0B", width: "30%", borderRadius: 5 }} />
+          <View style={{ backgroundColor: "#F97316", width: "5%", borderRadius: 5 }} />
         </View>
       </View>
     </View>
@@ -736,37 +883,49 @@ const Home = () => {
       <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FAFAFA" }}>
         <View
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: 14,
-            backgroundColor: "#111827",
+            width: 56,
+            height: 56,
+            borderRadius: 18,
+            backgroundColor: "#18181B",
             alignItems: "center",
             justifyContent: "center",
-            marginBottom: 14,
+            marginBottom: 20,
+            ...Platform.select({
+              ios: {
+                shadowColor: "#18181B",
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.2,
+                shadowRadius: 16,
+              },
+              android: { elevation: 8 },
+            }),
           }}
         >
           <ActivityIndicator size="small" color="#FFFFFF" />
         </View>
-        <Text style={{ color: "#6B7280", fontSize: 13, fontWeight: "500" }}>Loading jobs...</Text>
+        <Text style={{ color: "#71717A", fontSize: 15, fontWeight: "600", letterSpacing: -0.2 }}>Loading jobs...</Text>
       </SafeAreaView>
     )
   }
+
+  const filteredJobs = getFilteredJobs()
 
   /* ─────────────────── Main Render ─────────────────── */
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#FAFAFA" }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchJobs} tintColor="#111827" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchJobs} tintColor="#18181B" />}
+        contentContainerStyle={{ paddingBottom: 48 }}
       >
         {/* ── Header ── */}
         <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <View>
-              <Text style={{ color: "#9CA3AF", fontSize: 13, fontWeight: "500", marginBottom: 2 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#A1A1AA", fontSize: 14, fontWeight: "500", marginBottom: 6 }}>
                 Welcome back,
               </Text>
-              <Text style={{ fontSize: 26, fontWeight: "800", color: "#111827", letterSpacing: -0.5 }}>
+              <Text style={{ fontSize: 30, fontWeight: "800", color: "#18181B", letterSpacing: -1 }}>
                 {user?.firstName || "Freelancer"}
               </Text>
             </View>
@@ -777,21 +936,25 @@ const Home = () => {
           <View
             style={{
               backgroundColor: "#FFFFFF",
-              borderRadius: 14,
-              paddingHorizontal: 16,
-              paddingVertical: 13,
+              borderRadius: 16,
+              paddingHorizontal: 18,
+              paddingVertical: 15,
               flexDirection: "row",
               alignItems: "center",
               borderWidth: 1,
-              borderColor: "#E5E7EB",
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.03,
-              shadowRadius: 8,
-              elevation: 2,
+              borderColor: "rgba(0,0,0,0.05)",
+              ...Platform.select({
+                ios: {
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 12,
+                },
+                android: { elevation: 2 },
+              }),
             }}
           >
-            <Text style={{ color: "#9CA3AF", marginRight: 10, fontSize: 16 }}>{"🔍"}</Text>
+            <Text style={{ color: "#A1A1AA", marginRight: 12, fontSize: 18 }}>{"🔍"}</Text>
             <TextInput
               value={searchQuery}
               onChangeText={(t) => {
@@ -799,11 +962,11 @@ const Home = () => {
                 searchJobs(t)
               }}
               placeholder="Search jobs or skills..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#A1A1AA"
               style={{
                 flex: 1,
-                fontSize: 14,
-                color: "#111827",
+                fontSize: 15,
+                color: "#18181B",
                 fontWeight: "500",
               }}
             />
@@ -812,54 +975,120 @@ const Home = () => {
         </View>
 
         {/* ── Content ── */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
           {/* Section header */}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <Text style={{ fontSize: 18, fontWeight: "700", color: "#111827", letterSpacing: -0.2 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: "#18181B", letterSpacing: -0.5 }}>
               Available Jobs
             </Text>
-            <Text style={{ fontSize: 12, fontWeight: "600", color: "#6366F1" }}>
-              {jobs.length} {jobs.length === 1 ? "job" : "jobs"}
-            </Text>
+            <View
+              style={{
+                backgroundColor: "#18181B",
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+                borderRadius: 20,
+              }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "700", color: "#FFFFFF" }}>
+                {filteredJobs.length}
+              </Text>
+            </View>
           </View>
 
+          {/* Filter chips */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginBottom: 20 }}
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {filters.map((filter) => {
+              const isActive = activeFilter === filter
+              return (
+                <TouchableOpacity
+                  key={filter}
+                  activeOpacity={0.8}
+                  onPress={() => setActiveFilter(filter)}
+                  style={{
+                    paddingHorizontal: 18,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: isActive ? "#18181B" : "#FFFFFF",
+                    borderWidth: 1,
+                    borderColor: isActive ? "#18181B" : "rgba(0,0,0,0.06)",
+                    ...(!isActive
+                      ? Platform.select({
+                          ios: {
+                            shadowColor: "#000",
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.03,
+                            shadowRadius: 4,
+                          },
+                          android: { elevation: 1 },
+                        })
+                      : {}),
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: "600",
+                      color: isActive ? "#FFFFFF" : "#71717A",
+                    }}
+                  >
+                    {filter}
+                  </Text>
+                </TouchableOpacity>
+              )
+            })}
+          </ScrollView>
+
           {/* Jobs */}
-          {jobs.length === 0 ? (
+          {filteredJobs.length === 0 ? (
             <View
               style={{
                 backgroundColor: "#FFFFFF",
-                borderRadius: 20,
-                padding: 40,
+                borderRadius: 24,
+                padding: 56,
                 alignItems: "center",
                 borderWidth: 1,
-                borderColor: "#F3F4F6",
+                borderColor: "rgba(0,0,0,0.04)",
               }}
             >
               <View
                 style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 16,
-                  backgroundColor: "#F3F4F6",
+                  width: 72,
+                  height: 72,
+                  borderRadius: 24,
+                  backgroundColor: "#F4F4F5",
                   alignItems: "center",
                   justifyContent: "center",
-                  marginBottom: 14,
+                  marginBottom: 20,
                 }}
               >
-                <Text style={{ fontSize: 24 }}>{"💼"}</Text>
+                <Text style={{ fontSize: 32 }}>{"💼"}</Text>
               </View>
-              <Text style={{ color: "#6B7280", textAlign: "center", fontSize: 14, fontWeight: "500" }}>
-                No jobs found. Try adjusting your search.
+              <Text style={{ color: "#52525B", textAlign: "center", fontSize: 16, fontWeight: "600", marginBottom: 6 }}>
+                No jobs found
+              </Text>
+              <Text style={{ color: "#A1A1AA", textAlign: "center", fontSize: 14, fontWeight: "400", lineHeight: 21 }}>
+                Try adjusting your search or filters.
               </Text>
             </View>
           ) : (
-            jobs.map((job) => (
+            filteredJobs.map((job) => (
               <View key={job.id}>{renderJobCard({ item: job })}</View>
             ))
           )}
 
-          {/* Spacer between jobs and stats */}
-          <View style={{ height: 8 }} />
+          {/* Section divider */}
+          <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 28, gap: 14 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: "#E4E4E7" }} />
+            <Text style={{ fontSize: 12, fontWeight: "600", color: "#A1A1AA", letterSpacing: 0.6, textTransform: "uppercase" }}>
+              Your Dashboard
+            </Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: "#E4E4E7" }} />
+          </View>
 
           {/* Stats Card */}
           <StatsCard />

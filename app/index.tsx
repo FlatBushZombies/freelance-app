@@ -7,16 +7,35 @@ import { useAuth } from "@clerk/clerk-expo"
 import { IMAGES } from "@/constants"
 
 export default function Index() {
-  const { isLoaded, isSignedIn } = useAuth()
+  const { isLoaded, isSignedIn, userId } = useAuth()
 
   useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      router.replace("/(root)/home")
+    const checkOnboarding = async () => {
+      if (!isLoaded || !isSignedIn || !userId) return
+      
+      try {
+        // Check if user has completed onboarding
+        const response = await fetch(
+          `https://quickhands-api.vercel.app/api/user/get?clerkId=${userId}`
+        )
+        const data = await response.json()
+        
+        if (data.user?.completedOnboarding) {
+          router.replace("/(root)/home")
+        } else {
+          router.replace("/(auth)/onboarding")
+        }
+      } catch (error) {
+        console.error('Error checking onboarding:', error)
+        // Default to onboarding on error
+        router.replace("/(auth)/onboarding")
+      }
     }
-  }, [isLoaded, isSignedIn])
+    
+    checkOnboarding()
+  }, [isLoaded, isSignedIn, userId])
 
   const handleGetStarted = () => {
-    // Route based on session state
     if (isSignedIn) {
       router.replace("/(root)/home")
     } else {
@@ -30,18 +49,39 @@ export default function Index() {
 
   if (!isLoaded) {
     return (
-      <View className="flex-1 justify-center items-center bg-white">
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#FFFFFF",
+        }}
+      >
         <ActivityIndicator size="large" color="#10B981" />
       </View>
     )
   }
 
-  // If already signed in, show loading while redirecting
   if (isSignedIn) {
     return (
-      <View className="flex-1 justify-center items-center bg-white">
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#FFFFFF",
+        }}
+      >
         <ActivityIndicator size="large" color="#10B981" />
-        <Text className="text-gray-500 font-quicksand-medium mt-4">
+        <Text
+          className="font-quicksand-medium"
+          style={{
+            color: "#9CA3AF",
+            fontSize: 14,
+            marginTop: 16,
+            letterSpacing: 0.5,
+          }}
+        >
           Redirecting...
         </Text>
       </View>
@@ -49,95 +89,227 @@ export default function Index() {
   }
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Top decorative gradient bar */}
-      <View className="h-1 bg-emerald-500" />
-      
-      {/* Content Container */}
-      <View className="flex-1 px-8 pt-16 pb-8">
-        
-        {/* Logo and Text Section */}
-        <View className="flex-1 justify-center items-center">
-          {/* Logo */}
-          <View className="mb-8 items-center">
-            <View 
-              className="rounded-3xl"
+    <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+      {/* Subtle top accent */}
+      <View
+        style={{
+          height: 3,
+          backgroundColor: "#10B981",
+          borderBottomLeftRadius: 3,
+          borderBottomRightRadius: 3,
+        }}
+      />
+
+      {/* Content */}
+      <View
+        style={{
+          flex: 1,
+          paddingHorizontal: 32,
+          paddingTop: 60,
+          paddingBottom: 40,
+        }}
+      >
+        {/* Center Section */}
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          {/* Logo Container */}
+          <View style={{ alignItems: "center", marginBottom: 40 }}>
+            <View
               style={{
+                borderRadius: 28,
                 shadowColor: "#10B981",
-                shadowOffset: { width: 0, height: 12 },
-                shadowOpacity: 0.3,
-                shadowRadius: 20,
-                elevation: 15,
+                shadowOffset: { width: 0, height: 16 },
+                shadowOpacity: 0.2,
+                shadowRadius: 32,
+                elevation: 20,
               }}
             >
               <Image
                 source={IMAGES.logo}
-                className="w-28 h-28 rounded-3xl"
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 28,
+                }}
                 resizeMode="contain"
               />
             </View>
-            {/* Brand name under logo */}
-            <Text className="text-emerald-600 font-quicksand-semibold text-lg mt-4 tracking-widest uppercase">
+
+            {/* Brand Name */}
+            <Text
+              className="font-quicksand-semibold"
+              style={{
+                color: "#10B981",
+                fontSize: 14,
+                marginTop: 20,
+                letterSpacing: 4,
+                textTransform: "uppercase",
+              }}
+            >
               QuickHands
             </Text>
           </View>
 
-          {/* Decorative line */}
-          <View className="w-16 h-1 bg-emerald-500 rounded-full mb-8" />
+          {/* Decorative divider */}
+          <View
+            style={{
+              width: 40,
+              height: 2,
+              backgroundColor: "#10B981",
+              borderRadius: 1,
+              marginBottom: 32,
+            }}
+          />
 
           {/* Title */}
-          <Text className="text-4xl font-quicksand-bold text-gray-900 text-center leading-tight px-2 tracking-tight">
+          <Text
+            className="font-quicksand-bold"
+            style={{
+              fontSize: 36,
+              color: "#111827",
+              textAlign: "center",
+              lineHeight: 44,
+              paddingHorizontal: 8,
+              letterSpacing: -0.5,
+            }}
+          >
             Make money with your skills
           </Text>
 
           {/* Subtitle */}
-          <Text className="text-base font-quicksand-medium text-gray-500 text-center mt-5 px-6 leading-relaxed">
+          <Text
+            className="font-quicksand-medium"
+            style={{
+              fontSize: 16,
+              color: "#9CA3AF",
+              textAlign: "center",
+              marginTop: 16,
+              paddingHorizontal: 24,
+              lineHeight: 24,
+            }}
+          >
             Connect with people who need your expertise
           </Text>
         </View>
 
-        {/* Buttons Container */}
-        <View className="w-full items-center pb-4">
-          {/* Primary Button - Service Provider */}
+        {/* Bottom CTA Section */}
+        <View style={{ width: "100%", alignItems: "center" }}>
+          {/* Primary Button */}
           <TouchableOpacity
-            className="bg-gray-900 rounded-2xl w-full items-center overflow-hidden"
             onPress={handleGetStarted}
-            activeOpacity={0.9}
+            activeOpacity={0.85}
             style={{
+              width: "100%",
+              backgroundColor: "#111827",
+              borderRadius: 16,
               shadowColor: "#000",
               shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.15,
+              shadowOpacity: 0.12,
               shadowRadius: 24,
               elevation: 12,
             }}
           >
-            {/* Inner border effect */}
-            <View className="w-full py-5 px-8 border-2 border-white/20 rounded-2xl items-center flex-row justify-center">
-              <Text className="text-white font-quicksand-semibold text-lg tracking-wide">
+            <View
+              style={{
+                width: "100%",
+                paddingVertical: 18,
+                paddingHorizontal: 32,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.08)",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                className="font-quicksand-semibold"
+                style={{
+                  color: "#FFFFFF",
+                  fontSize: 17,
+                  letterSpacing: 0.3,
+                }}
+              >
                 {isSignedIn ? "Go to Dashboard" : "I want to offer services"}
               </Text>
-              <Text className="text-white ml-3 text-lg">→</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Secondary Button - Service Seeker */}
-          <TouchableOpacity 
-            className="py-5 px-8 mt-6" 
-            onPress={handleBrowseServices}
-            activeOpacity={0.7}
-          >
-            <View className="items-center">
-              <Text className="text-gray-600 font-quicksand-medium text-base">
-                i want to look for services
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.5)",
+                  fontSize: 18,
+                  marginLeft: 12,
+                }}
+              >
+                {"->"}
               </Text>
-              <View className="w-full h-px bg-gray-300 mt-2" />
             </View>
           </TouchableOpacity>
 
-          {/* Trust indicator */}
-          <View className="flex-row items-center mt-8">
-            <View className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
-            <Text className="text-gray-400 font-quicksand-medium text-xs tracking-wide">
+          {/* Secondary Button */}
+          <TouchableOpacity
+            onPress={handleBrowseServices}
+            activeOpacity={0.6}
+            style={{
+              paddingVertical: 18,
+              paddingHorizontal: 32,
+              marginTop: 12,
+            }}
+          >
+            <View style={{ alignItems: "center" }}>
+              <Text
+                className="font-quicksand-medium"
+                style={{
+                  color: "#6B7280",
+                  fontSize: 15,
+                }}
+              >
+                I want to look for services
+              </Text>
+              <View
+                style={{
+                  width: "100%",
+                  height: 1,
+                  backgroundColor: "#E5E7EB",
+                  marginTop: 6,
+                  borderRadius: 1,
+                }}
+              />
+            </View>
+          </TouchableOpacity>
+
+          {/* Trust Indicator */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginTop: 28,
+              backgroundColor: "#F9FAFB",
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 20,
+            }}
+          >
+            <View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: "#10B981",
+                marginRight: 8,
+              }}
+            />
+            <Text
+              className="font-quicksand-medium"
+              style={{
+                color: "#9CA3AF",
+                fontSize: 12,
+                letterSpacing: 0.5,
+              }}
+            >
               Early access for specialists
             </Text>
           </View>

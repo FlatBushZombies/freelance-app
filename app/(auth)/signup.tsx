@@ -181,8 +181,8 @@ const SignUp = () => {
               You have successfully verified your account.
             </Text>
             <CustomButton
-              title="Browse Home"
-              onPress={() => router.push(`/(root)/home`)}
+              title="Continue to Profile Setup"
+              onPress={() => router.replace("/(auth)/onboarding")}
               className="mt-5"
             />
           </View>
