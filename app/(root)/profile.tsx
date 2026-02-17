@@ -268,15 +268,6 @@ const ProfileScreen = () => {
           </View>
         </View>
       </Modal>
-
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-        <Text className="text-xl font-bold text-gray-900">Profile</Text>
-        <TouchableOpacity>
-          <Ionicons name="settings-outline" size={24} color="#374151" />
-        </TouchableOpacity>
-      </View>
-
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* User Info Section */}
         <View className="bg-white mx-4 mt-4 rounded-2xl p-6" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 8 }}>

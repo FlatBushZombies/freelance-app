@@ -12,12 +12,8 @@ import {
 import { useUser } from "@clerk/clerk-expo"
 import { useEffect, useState } from "react"
 import { ArrowUpOnSquareStackIcon } from "react-native-heroicons/outline"
-
 import { icons } from "@/constants"
 
-/* -----------------------------------------
-   Tab Icon Component (Image OR Heroicon)
------------------------------------------- */
 const TabIcon = ({
   source,
   Icon,
@@ -37,7 +33,8 @@ const TabIcon = ({
     style={{
       alignItems: "center",
       justifyContent: "center",
-      paddingTop: 4,
+      paddingVertical: 0,
+      flex: 1,
       minWidth: 56,
     }}
   >

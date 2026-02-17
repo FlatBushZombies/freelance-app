@@ -18,6 +18,7 @@ import {
   Platform,
   Animated,
   Dimensions,
+  Image,
 } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import Toast from "react-native-toast-message"
@@ -34,6 +35,7 @@ interface Job {
   location: string
   createdAt: string
   clientName: string
+  clientAvatar: string | null
   clientRating: number
   isMatch?: boolean
 }
@@ -52,6 +54,7 @@ const Home = () => {
   const [modalVisible, setModalVisible] = useState(false)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [activeFilter, setActiveFilter] = useState("All")
+
   const scrollY = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
@@ -125,8 +128,9 @@ const Home = () => {
             budget: Number.parseFloat(job.maxPrice) || 0,
             category,
             location: job.specialistChoice || "Remote",
-            createdAt: job.startDate || new Date().toISOString(),
-            clientName: "Anonymous Client",
+            createdAt: job.createdAt || new Date().toISOString(),
+            clientName: job.userName || "Anonymous Client",
+            clientAvatar: job.userAvatar || null,
             clientRating: 4.5,
             isMatch: userSkills && category.toLowerCase().includes(userSkills.toLowerCase()),
           }
@@ -167,8 +171,9 @@ const Home = () => {
             budget: Number.parseFloat(job.maxPrice) || 0,
             category,
             location: job.specialistChoice || "Remote",
-            createdAt: job.startDate || new Date().toISOString(),
-            clientName: "Anonymous Client",
+            createdAt: job.createdAt || new Date().toISOString(),
+            clientName: job.userName || "Anonymous Client",
+            clientAvatar: job.userAvatar || null,
             clientRating: 4.5,
             isMatch: userSkills && category.toLowerCase().includes(userSkills.toLowerCase()),
           }
@@ -281,10 +286,15 @@ const Home = () => {
   }
 
   const timeAgo = (date: string) => {
-    const diff = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60)
-    if (diff > 24) return `${Math.floor(diff / 24)}d ago`
-    if (diff > 1) return `${Math.floor(diff)}h ago`
-    return "Just now"
+    const diffMs = Date.now() - new Date(date).getTime()
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    
+    if (diffMins < 1) return "Just now"
+    if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`
   }
 
   const filters = ["All", "Matched", "Recent", "High Budget"]
@@ -344,22 +354,31 @@ const Home = () => {
                 marginRight: 12,
                 borderWidth: 1.5,
                 borderColor: item.isMatch ? "rgba(16, 185, 129, 0.2)" : "rgba(0,0,0,0.04)",
+                overflow: "hidden",
               }}
             >
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: "700",
-                  color: item.isMatch ? "#059669" : "#71717A",
-                }}
-              >
-                {item.clientName.charAt(0)}
-              </Text>
+              {item.clientAvatar ? (
+                <Image
+                  source={{ uri: item.clientAvatar }}
+                  style={{ width: 42, height: 42 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: "700",
+                    color: item.isMatch ? "#059669" : "#71717A",
+                  }}
+                >
+                  {item.clientName.charAt(0).toUpperCase()}
+                </Text>
+              )}
             </View>
 
             {/* Client name + meta */}
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: "600", color: "#18181B", letterSpacing: -0.1 }}>
+              <Text className="text-xs">
                 {item.clientName}
               </Text>
               <View style={{ flexDirection: "row", alignItems: "center", marginTop: 3, gap: 5 }}>
