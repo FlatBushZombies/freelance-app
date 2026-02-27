@@ -12,29 +12,19 @@ const SignIn = () => {
   const { signIn, setActive, isLoaded } = useSignIn()
   const { isSignedIn } = useAuth()
 
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  })
-
+  const [form, setForm] = useState({ email: "", password: "" })
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!isLoaded) return
-
-    if (isSignedIn) {
-      router.replace("/(root)/home")
-    }
+    if (isSignedIn) router.replace("/(root)/home")
   }, [isLoaded, isSignedIn])
 
   const onSignInPress = useCallback(async () => {
     if (!isLoaded || loading) return
 
     if (!form.email.trim() || !form.password) {
-      return Alert.alert(
-        "Missing Fields",
-        "Please enter both email and password."
-      )
+      return Alert.alert("Missing Fields", "Please enter both email and password.")
     }
 
     setLoading(true)
@@ -47,21 +37,14 @@ const SignIn = () => {
 
       if (signInAttempt.status === "complete") {
         await setActive({ session: signInAttempt.createdSessionId })
-        // Let index.tsx handle the redirect based on onboarding status
         router.replace("/")
       } else {
-        console.log(
-          "SignIn attempt incomplete:",
-          JSON.stringify(signInAttempt, null, 2)
-        )
+        console.log("SignIn attempt incomplete:", JSON.stringify(signInAttempt, null, 2))
         Alert.alert("Error", "Log in failed. Please try again.")
       }
     } catch (err: any) {
       console.log("SignIn error:", JSON.stringify(err, null, 2))
-      const message =
-        err.errors?.[0]?.longMessage ||
-        err.message ||
-        "Unexpected error occurred."
+      const message = err.errors?.[0]?.longMessage || err.message || "Unexpected error occurred."
       Alert.alert("Error", message)
     } finally {
       setLoading(false)
@@ -73,110 +56,44 @@ const SignIn = () => {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: "#FFFFFF" }}
+      className="flex-1 bg-white"
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-        {/* Header Section */}
-        <View
-          style={{
-            width: "100%",
-            height: 280,
-            backgroundColor: "#FAFAFA",
-            justifyContent: "flex-end",
-            paddingBottom: 32,
-            paddingHorizontal: 28,
-            borderBottomLeftRadius: 32,
-            borderBottomRightRadius: 32,
-          }}
-        >
-          {/* Subtle accent bar at top */}
-          <View
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 3,
-              backgroundColor: "#10B981",
-              borderBottomLeftRadius: 3,
-              borderBottomRightRadius: 3,
-            }}
-          />
+      <View className="flex-1 bg-white">
 
-          {/* Small welcome label */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: 12,
-            }}
-          >
-            <View
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: "#10B981",
-                marginRight: 10,
-              }}
-            />
-            <Text
-              style={{
-                fontSize: 13,
-                color: "#10B981",
-                letterSpacing: 2,
-                textTransform: "uppercase",
-                fontWeight: "600",
-              }}
-            >
-              Welcome back
+        {/* ── Header Section ── */}
+        <View className="w-full h-[280px] bg-gray-50 justify-end pb-8 px-7 rounded-b-[32px]">
+
+          {/* Accent bar */}
+          <View className="absolute top-0 left-0 right-0 h-[3px] bg-[#2D3F50] rounded-b-sm" />
+
+          {/* Welcome label */}
+          <View className="flex-row items-center mb-3">
+            <View className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2.5" />
+            <Text className="font-quicksand-semibold text-[#2D3F50] text-[13px] tracking-[2px] uppercase">
+              Register
             </Text>
           </View>
 
           {/* Main heading */}
-          <Text
-            style={{
-              fontSize: 32,
-              color: "#111827",
-              fontWeight: "700",
-              letterSpacing: -0.5,
-              lineHeight: 38,
-            }}
-          >
+          <Text className="font-quicksand-bold text-[32px] text-gray-900 tracking-[-0.5px] leading-[38px]">
             Sign in to{"\n"}your account
           </Text>
 
           {/* Subtitle */}
-          <Text
-            style={{
-              fontSize: 15,
-              color: "#9CA3AF",
-              marginTop: 8,
-              lineHeight: 22,
-            }}
-          >
-            Pick up where you left off
+          <Text className="font-quicksand-medium text-[15px] text-gray-400 mt-2 leading-[22px]">
+            Register as Specialist
           </Text>
         </View>
 
-        {/* Form Section */}
-        <View
-          style={{
-            paddingHorizontal: 24,
-            paddingTop: 32,
-            paddingBottom: 24,
-          }}
-        >
+        {/* ── Form Section ── */}
+        <View className="px-6 pt-8 pb-6">
+
           {/* Input Fields Container */}
           <View
+            className="bg-white rounded-[20px] border border-gray-100 p-5"
             style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: 20,
-              borderWidth: 1,
-              borderColor: "#F3F4F6",
-              padding: 20,
               shadowColor: "#000",
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.03,
@@ -192,12 +109,10 @@ const SignIn = () => {
               keyboardType="email-address"
               autoCapitalize="none"
               value={form.email}
-              onChangeText={(value: string) =>
-                setForm({ ...form, email: value })
-              }
+              onChangeText={(value: string) => setForm({ ...form, email: value })}
             />
 
-            <View style={{ height: 8 }} />
+            <View className="h-2" />
 
             <InputField
               label="Password"
@@ -206,14 +121,12 @@ const SignIn = () => {
               secureTextEntry
               textContentType="password"
               value={form.password}
-              onChangeText={(value: string) =>
-                setForm({ ...form, password: value })
-              }
+              onChangeText={(value: string) => setForm({ ...form, password: value })}
             />
           </View>
 
           {/* Sign In Button */}
-          <View style={{ marginTop: 24 }}>
+          <View className="mt-6">
             <CustomButton
               title={loading ? "Signing In..." : "Sign In"}
               onPress={onSignInPress}
@@ -223,70 +136,29 @@ const SignIn = () => {
           </View>
 
           {/* Divider */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginTop: 28,
-              marginBottom: 4,
-            }}
-          >
-            <View
-              style={{
-                flex: 1,
-                height: 1,
-                backgroundColor: "#F3F4F6",
-              }}
-            />
-            <Text
-              style={{
-                paddingHorizontal: 16,
-                fontSize: 13,
-                color: "#D1D5DB",
-                letterSpacing: 0.5,
-                textTransform: "uppercase",
-              }}
-            >
+          <View className="flex-row items-center mt-7 mb-1">
+            <View className="flex-1 h-px bg-gray-100" />
+            <Text className="font-quicksand-medium px-4 text-[13px] text-gray-300 tracking-[0.5px] uppercase">
               or
             </Text>
-            <View
-              style={{
-                flex: 1,
-                height: 1,
-                backgroundColor: "#F3F4F6",
-              }}
-            />
+            <View className="flex-1 h-px bg-gray-100" />
           </View>
 
           <OAuth />
 
           {/* Sign Up Link */}
-          <View
-            style={{
-              alignItems: "center",
-              marginTop: 32,
-              paddingBottom: 16,
-            }}
-          >
+          <View className="items-center mt-8 pb-4">
             <Link
               href="/(auth)/signup"
-              style={{
-                fontSize: 15,
-                textAlign: "center",
-                color: "#9CA3AF",
-              }}
+              className="font-quicksand-medium text-[15px] text-center text-gray-400"
             >
               Don't have an account?{" "}
-              <Text
-                style={{
-                  color: "#10B981",
-                  fontWeight: "600",
-                }}
-              >
+              <Text className="font-quicksand-semibold text-[#2D3F50]">
                 Sign Up
               </Text>
             </Link>
           </View>
+
         </View>
       </View>
     </ScrollView>

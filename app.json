@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Quickhands",
-    "slug": "freelance-app",
+    "name": "Quickhands Pro",
+    "slug": "quickhands-pro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/quickhands.png",
-    "scheme": "freelanceapp",
+    "scheme": "quickhandspro",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.noisfera.quickhandspro"
     },
     "web": {
       "output": "static",
@@ -45,18 +46,17 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "3c6718c1-3dc9-48b5-99ea-75e924a4d2f2"
-      }
-    },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/3c6718c1-3dc9-48b5-99ea-75e924a4d2f2"
+      "url": "https://u.expo.dev/56170dc2-be9a-4f88-bd34-bb0cdfd645e1"
     },
-    "owner": "bigcat87"
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "56170dc2-be9a-4f88-bd34-bb0cdfd645e1"
+      }
+    }
   }
 }

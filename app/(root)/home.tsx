@@ -28,22 +28,22 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window")
 
 // ─── Design Tokens ────────────────────────────────────────────
 const C = {
-  // Greens
-  sage:       "#B8D4BA",   // soft sage — primary accent
-  forest:     "#2D6A4F",   // deep forest — primary text accent
-  mint:       "#D8EDDA",   // lightest mint — backgrounds
-  fern:       "#52B788",   // medium green — highlights
-  moss:       "#40916C",   // moss — interactive
-  leaf:       "#74C69D",   // leaf — secondary accent
+  // Blues (replacing greens)
+  sage:       "#B8C9D4",   // soft slate — primary accent
+  forest:     "#2D4A6A",   // deep navy — primary text accent
+  mint:       "#D8E8ED",   // lightest blue — backgrounds
+  fern:       "#52839B",   // medium blue — highlights
+  moss:       "#406891",   // slate — interactive
+  leaf:       "#74A0B9",   // light blue — secondary accent
 
   // Neutrals
-  ink:        "#1A1F1C",   // near-black with green undertone
-  charcoal:   "#2C3330",   // card dark surfaces
-  stone:      "#6B7970",   // body text
-  pebble:     "#A8B5AD",   // muted text
-  mist:       "#F2F7F3",   // page background
+  ink:        "#1A1C1F",   // near-black with blue undertone
+  charcoal:   "#2C3036",   // card dark surfaces
+  stone:      "#6B7479",   // body text
+  pebble:     "#A8B2B5",   // muted text
+  mist:       "#F2F5F7",   // page background
   cloud:      "#FFFFFF",   // card surface
-  fog:        "#EBF2EC",   // subtle borders / chip bg
+  fog:        "#EBEff2",   // subtle borders / chip bg
 
   // Status
   gold:       "#C9A84C",   // earnings / achievement
@@ -52,15 +52,15 @@ const C = {
 
 const shadow = {
   card: Platform.select({
-    ios: { shadowColor: "#2D6A4F", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 24 },
+    ios: { shadowColor: "#2D4A6A", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 24 },
     android: { elevation: 3 },
   }),
   dark: Platform.select({
-    ios: { shadowColor: "#1A1F1C", shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.22, shadowRadius: 28 },
+    ios: { shadowColor: "#1A1C1F", shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.22, shadowRadius: 28 },
     android: { elevation: 16 },
   }),
   btn: Platform.select({
-    ios: { shadowColor: "#2D6A4F", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 14 },
+    ios: { shadowColor: "#2D4A6A", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 14 },
     android: { elevation: 6 },
   }),
   sm: Platform.select({
@@ -98,6 +98,7 @@ const Home = () => {
   const [modalVisible, setModalVisible] = useState(false)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [activeFilter, setActiveFilter] = useState("All")
+  const [showSplash, setShowSplash] = useState(true)
 
   const scrollY = useRef(new Animated.Value(0)).current
 
@@ -245,7 +246,7 @@ const Home = () => {
         body: JSON.stringify({
           userId: user.id,
           jobId: selectedJob.id,
-          userName: user.firstName || "Freelancer",
+          userName: user.fullName || user.firstName || "Freelancer",
           userEmail: user.primaryEmailAddress?.emailAddress,
           quotation: applicationData.quotation,
           conditions: applicationData.conditions,
@@ -653,7 +654,7 @@ const Home = () => {
               height: 28,
               borderRadius: 4,
               backgroundColor: filled
-                ? `rgba(82, 183, 136, ${0.15 + (i / 30) * 0.85})`
+                ? `rgba(82, 131, 155, ${0.15 + (i / 30) * 0.85})`
                 : "rgba(255,255,255,0.05)",
             }} />
           )
@@ -992,25 +993,17 @@ const Home = () => {
             <View style={{
               backgroundColor: C.cloud,
               borderRadius: 24,
-              padding: 52,
+              padding: 32,
               alignItems: "center",
               borderWidth: 1.5,
               borderColor: C.fog,
               ...shadow.sm,
             }}>
-              <View style={{
-                width: 72,
-                height: 72,
-                borderRadius: 22,
-                backgroundColor: C.mint,
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: 18,
-                borderWidth: 1.5,
-                borderColor: `${C.fern}25`,
-              }}>
-                <Text style={{ fontSize: 32 }}>💼</Text>
-              </View>
+              <Image
+                source={require("@/assets/images/empty-jobs.jpg")}
+                style={{ width: SCREEN_WIDTH - 96, height: (SCREEN_WIDTH - 96) * 0.77, marginBottom: 10 }}
+                resizeMode="contain"
+              />
               <Text style={{ color: C.ink, textAlign: "center", fontSize: 17, fontWeight: "800", marginBottom: 6, letterSpacing: -0.4 }}>
                 No jobs found
               </Text>

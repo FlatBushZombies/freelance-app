@@ -102,23 +102,89 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
     return "Just now"
   }
 
-  const renderNotification = ({ item }: { item: Notification }) => (
-    <TouchableOpacity
-      onPress={() => markAsRead(item.id)}
-      className={`p-4 border-b border-gray-100 ${!item.read ? "bg-blue-50" : "bg-white"}`}
-      activeOpacity={0.7}
-    >
-      <View className="flex-row items-start justify-between">
-        <View className="flex-1 mr-3">
-          <Text className={`text-sm leading-relaxed ${!item.read ? "font-semibold text-gray-900" : "text-gray-700"}`}>
-            {item.message}
-          </Text>
-          <Text className="text-xs text-gray-500 mt-1">{formatTimeAgo(item.createdAt)}</Text>
+  const getNotificationIcon = (message: string) => {
+    if (message.includes("accepted")) return { icon: "✅", color: "#10B981", bg: "#D1FAE5" }
+    if (message.includes("rejected")) return { icon: "❌", color: "#EF4444", bg: "#FEE2E2" }
+    if (message.includes("New job")) return { icon: "💼", color: "#3B82F6", bg: "#DBEAFE" }
+    return { icon: "🔔", color: "#6366F1", bg: "#E0E7FF" }
+  }
+
+  const renderNotification = ({ item }: { item: Notification }) => {
+    const iconData = getNotificationIcon(item.message)
+    
+    return (
+      <TouchableOpacity
+        onPress={() => markAsRead(item.id)}
+        activeOpacity={0.7}
+        style={{
+          backgroundColor: item.read ? "#FFFFFF" : "#F8FAFC",
+          marginHorizontal: 16,
+          marginBottom: 12,
+          borderRadius: 16,
+          padding: 16,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: item.read ? 0.03 : 0.08,
+          shadowRadius: 8,
+          elevation: item.read ? 1 : 3,
+          borderWidth: 1,
+          borderColor: item.read ? "#F1F5F9" : "#E2E8F0",
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+          {/* Icon */}
+          <View
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: iconData.bg,
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 12,
+            }}
+          >
+            <Text style={{ fontSize: 24 }}>{iconData.icon}</Text>
+          </View>
+
+          {/* Content */}
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: item.read ? "400" : "600",
+                color: "#111827",
+                lineHeight: 21,
+                marginBottom: 6,
+              }}
+            >
+              {item.message}
+            </Text>
+
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text style={{ fontSize: 13, color: "#6B7280" }}>
+                {formatTimeAgo(item.createdAt)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Unread indicator */}
+          {!item.read && (
+            <View
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: "#3B82F6",
+                marginLeft: 8,
+                marginTop: 6,
+              }}
+            />
+          )}
         </View>
-        {!item.read && <View className="w-2 h-2 rounded-full bg-blue-500 mt-1" />}
-      </View>
-    </TouchableOpacity>
-  )
+      </TouchableOpacity>
+    )
+  }
 
   return (
     <>
@@ -164,13 +230,28 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
             {/* List */}
             {loading ? (
               <View className="flex-1 items-center justify-center">
-                <ActivityIndicator size="large" color="#111827" />
+                <ActivityIndicator size="large" color="#3B82F6" />
+                <Text style={{ color: "#6B7280", marginTop: 12 }}>Loading notifications...</Text>
               </View>
             ) : notifications.length === 0 ? (
               <View className="flex-1 items-center justify-center px-6">
-                <Text className="text-6xl mb-4">🔔</Text>
-                <Text className="text-gray-900 text-lg font-semibold mb-2">No notifications yet</Text>
-                <Text className="text-gray-500 text-center">You’ll see notifications here when you receive them</Text>
+                <View style={{
+                  backgroundColor: "#F3F4F6",
+                  width: 120,
+                  height: 120,
+                  borderRadius: 60,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 24,
+                }}>
+                  <Text style={{ fontSize: 56 }}>🔔</Text>
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: "700", color: "#111827", marginBottom: 8, textAlign: "center" }}>
+                  No notifications yet
+                </Text>
+                <Text style={{ fontSize: 15, color: "#6B7280", textAlign: "center", lineHeight: 22 }}>
+                  You'll be notified when clients{"\n"}respond to your applications
+                </Text>
               </View>
             ) : (
               <FlatList
@@ -178,8 +259,9 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
                 renderItem={renderNotification}
                 keyExtractor={(item) => item.id.toString()}
                 showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingTop: 16, paddingBottom: 24 }}
                 refreshControl={
-                  <RefreshControl refreshing={loading} onRefresh={fetchNotifications} />
+                  <RefreshControl refreshing={loading} onRefresh={fetchNotifications} colors={["#3B82F6"]} />
                 }
               />
             )}

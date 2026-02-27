@@ -1,78 +1,67 @@
 "use client"
-import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Modal } from "react-native"
+import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Modal, ActivityIndicator } from "react-native"
 import { useUser } from "@clerk/clerk-expo"
 import { Ionicons } from "@expo/vector-icons"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import WalletComponent from "@/components/WalletComponent"
 
 const ProfileScreen = () => {
   const { user } = useUser()
-  const [showVerificationModal, setShowVerificationModal] = useState(true)
+  const [showVerificationModal, setShowVerificationModal] = useState(false)
   const [activeTab, setActiveTab] = useState("projects")
+  const [userProjects, setUserProjects] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const userProjects = [
-    {
-      id: 1,
-      title: "E-commerce Website Development",
-      client: "Sarah Johnson",
-      status: "completed",
-      completedDate: "2024-01-10",
-      rating: 5,
-      clientFeedback: "Excellent work! Delivered on time and exceeded expectations.",
-      category: "Development",
-      budget: "$2,500",
-    },
-    {
-      id: 2,
-      title: "Mobile App UI/UX Design",
-      client: "TechStart Inc.",
-      status: "completed",
-      completedDate: "2023-12-15",
-      rating: 4,
-      clientFeedback: "Great design skills and very responsive to feedback.",
-      category: "Design",
-      budget: "$1,800",
-    },
-    {
-      id: 3,
-      title: "Content Writing for Health Blog",
-      client: "Dr. Amanda Rodriguez",
-      status: "in_progress",
-      startDate: "2024-01-12",
-      progress: 60,
-      category: "Writing",
-      budget: "$800",
-    },
-    {
-      id: 4,
-      title: "Social Media Marketing Campaign",
-      client: "Fashion Forward",
-      status: "completed",
-      completedDate: "2023-11-20",
-      rating: 5,
-      clientFeedback: "Amazing results! Our engagement increased by 300%.",
-      category: "Marketing",
-      budget: "$1,200",
-    },
-    {
-      id: 5,
-      title: "Logo Design for Tech Startup",
-      client: "Michael Chen",
-      status: "in_progress",
-      startDate: "2024-01-14",
-      progress: 25,
-      category: "Design",
-      budget: "$600",
-    },
-  ]
+  useEffect(() => {
+    const fetchApplications = async () => {
+      if (!user?.id) return
 
+      try {
+        const token = await (user as any).getIdToken?.()
+        if (!token) {
+          setLoading(false)
+          return
+        }
+
+        const response = await fetch(
+          'https://quickhands-api.vercel.app/api/applications/my',
+          {
+            headers: { 'Authorization': `Bearer ${token}` },
+          }
+        )
+        const data = await response.json()
+
+        if (data.success && Array.isArray(data.data)) {
+          // Transform applications into project format
+          const projects = data.data.map((app: any) => ({
+            id: app.id,
+            title: app.jobServiceType || "Untitled Job",
+            client: app.jobOwnerName || "Client",
+            status: app.status === 'accepted' ? 'in_progress' : app.status === 'rejected' ? 'rejected' : 'pending',
+            startDate: app.createdAt,
+            quotation: app.quotation || 'Not specified',
+            conditions: app.conditions || '',
+            category: app.jobServiceType || 'General',
+            budget: app.quotation || 'N/A',
+          }))
+          setUserProjects(projects)
+        }
+      } catch (error) {
+        console.error('Error fetching applications:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchApplications()
+  }, [user?.id])
+
+  const acceptedProjects = userProjects.filter((project) => project.status === "in_progress")
+  const pendingProjects = userProjects.filter((project) => project.status === "pending")
+  const rejectedProjects = userProjects.filter((project) => project.status === "rejected")
   const completedProjects = userProjects.filter((project) => project.status === "completed")
-  const inProgressProjects = userProjects.filter((project) => project.status === "in_progress")
 
-  const averageRating =
-    completedProjects.length > 0
-      ? completedProjects.reduce((sum, project) => sum + (project.rating || 0), 0) / completedProjects.length
-      : 0
+  const averageRating = 0 // Ratings not implemented yet
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, index) => (
@@ -85,44 +74,52 @@ const ProfileScreen = () => {
     ))
   }
 
-  const renderProject = (project: any) => (
-    <View key={project.id} className="bg-white rounded-2xl p-4 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 }}>
-      <View className="flex-row justify-between items-start mb-2">
-        <Text className="text-lg font-semibold text-gray-900 flex-1 mr-2">{project.title}</Text>
-        <View className={`px-2 py-1 rounded ${project.status === "completed" ? "bg-green-50" : "bg-blue-50"}`}>
-          <Text
-            className={`text-xs font-semibold ${project.status === "completed" ? "text-green-600" : "text-blue-600"}`}
-          >
-            {project.status === "completed" ? "COMPLETED" : "IN PROGRESS"}
-          </Text>
-        </View>
-      </View>
-
-      <Text className="text-gray-600 text-sm mb-2">Client: {project.client}</Text>
-
-      {project.status === "completed" && (
-        <View className="mb-3">
-          <View className="flex-row items-center mb-1">
-            <View className="flex-row mr-2">{renderStars(project.rating)}</View>
-            <Text className="text-sm text-gray-600">({project.rating}/5)</Text>
+  const renderProject = (project: any) => {
+    const getStatusStyle = (status: string) => {
+      switch (status) {
+        case 'in_progress':
+          return { bg: 'bg-green-50', text: 'text-green-600', label: 'ACCEPTED' }
+        case 'pending':
+          return { bg: 'bg-yellow-50', text: 'text-yellow-600', label: 'PENDING' }
+        case 'rejected':
+          return { bg: 'bg-red-50', text: 'text-red-600', label: 'REJECTED' }
+        case 'completed':
+          return { bg: 'bg-blue-50', text: 'text-blue-600', label: 'COMPLETED' }
+        default:
+          return { bg: 'bg-gray-50', text: 'text-gray-600', label: 'UNKNOWN' }
+      }
+    }
+    
+    const statusStyle = getStatusStyle(project.status)
+    
+    return (
+      <View key={project.id} className="bg-white rounded-2xl p-4 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 }}>
+        <View className="flex-row justify-between items-start mb-2">
+          <Text className="text-lg font-semibold text-gray-900 flex-1 mr-2">{project.title}</Text>
+          <View className={`px-2 py-1 rounded ${statusStyle.bg}`}>
+            <Text className={`text-xs font-semibold ${statusStyle.text}`}>
+              {statusStyle.label}
+            </Text>
           </View>
-          <Text className="text-gray-500 text-sm italic">{project.clientFeedback}</Text>
-          <Text className="text-gray-400 text-xs mt-1">Completed on {project.completedDate}</Text>
+        </View>
+
+        <Text className="text-gray-600 text-sm mb-2">Client: {project.client}</Text>
+
+      {project.quotation && (
+        <View className="bg-green-50 rounded-lg p-3 mb-2">
+          <Text className="text-green-800 font-semibold text-sm">Your Quotation: {project.quotation}</Text>
+        </View>
+      )}
+
+      {project.conditions && (
+        <View className="bg-blue-50 rounded-lg p-3 mb-2">
+          <Text className="text-blue-800 text-sm">Terms: {project.conditions}</Text>
         </View>
       )}
 
-      {project.status === "in_progress" && (
-        <View className="mb-3">
-          <View className="flex-row justify-between items-center mb-1">
-            <Text className="text-sm text-gray-600">Progress</Text>
-            <Text className="text-sm font-semibold text-blue-600">{project.progress}%</Text>
-          </View>
-          <View className="w-full bg-gray-200 rounded-full h-2">
-            <View className="bg-blue-500 h-2 rounded-full" style={{ width: `${project.progress}%` }} />
-          </View>
-          <Text className="text-gray-400 text-xs mt-1">Started on {project.startDate}</Text>
-        </View>
-      )}
+      <Text className="text-gray-400 text-xs mt-1">
+        Applied: {new Date(project.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+      </Text>
 
       <View className="flex-row justify-between items-center">
         <View className="bg-gray-100 px-2 py-1 rounded border border-gray-200">
@@ -131,7 +128,7 @@ const ProfileScreen = () => {
         <Text className="text-gray-700 font-semibold">{project.budget}</Text>
       </View>
     </View>
-  )
+  )}
 
   const renderPersonalInfo = () => (
     <View className="px-4 py-4">
@@ -193,43 +190,76 @@ const ProfileScreen = () => {
     </View>
   )
 
-  const renderProjects = () => (
-    <View className="px-4 py-4">
-      <Text className="text-xl font-bold text-gray-900 mb-4">My Projects</Text>
+  const renderProjects = () => {
+    if (loading) {
+      return (
+        <View className="px-4 py-8 items-center">
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text className="text-gray-500 mt-4">Loading your applications...</Text>
+        </View>
+      )
+    }
 
-      {/* In Progress Projects */}
-      {inProgressProjects.length > 0 && (
-        <View className="mb-6">
-          <View className="flex-row items-center mb-3">
-            <Ionicons name="time-outline" size={20} color="#3B82F6" />
-            <Text className="text-lg font-semibold text-gray-900 ml-2">In Progress ({inProgressProjects.length})</Text>
+    return (
+      <View className="px-4 py-4">
+        <Text className="text-xl font-bold text-gray-900 mb-4">My Applications</Text>
+
+        {/* Accepted Projects */}
+        {acceptedProjects.length > 0 && (
+          <View className="mb-6">
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+              <Text className="text-lg font-semibold text-gray-900 ml-2">Accepted ({acceptedProjects.length})</Text>
+            </View>
+            {acceptedProjects.map(renderProject)}
           </View>
-          {inProgressProjects.map(renderProject)}
-        </View>
-      )}
+        )}
 
-      {/* Completed Projects */}
-      {completedProjects.length > 0 && (
-        <View>
-          <View className="flex-row items-center mb-3">
-            <Ionicons name="checkmark-circle-outline" size={20} color="#10B981" />
-            <Text className="text-lg font-semibold text-gray-900 ml-2">Completed ({completedProjects.length})</Text>
+        {/* Pending Applications */}
+        {pendingProjects.length > 0 && (
+          <View className="mb-6">
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="time-outline" size={20} color="#F59E0B" />
+              <Text className="text-lg font-semibold text-gray-900 ml-2">Pending ({pendingProjects.length})</Text>
+            </View>
+            {pendingProjects.map(renderProject)}
           </View>
-          {completedProjects.map(renderProject)}
-        </View>
-      )}
+        )}
 
-      {userProjects.length === 0 && (
-        <View className="bg-white rounded-2xl p-8 items-center">
-          <Ionicons name="briefcase-outline" size={48} color="#9CA3AF" />
-          <Text className="text-gray-500 text-lg font-medium mt-4">No projects yet</Text>
-          <Text className="text-gray-400 text-center mt-2">
-            Start browsing available tasks to begin your freelancing journey!
-          </Text>
-        </View>
-      )}
-    </View>
-  )
+        {/* Rejected Applications */}
+        {rejectedProjects.length > 0 && (
+          <View className="mb-6">
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="close-circle" size={20} color="#EF4444" />
+              <Text className="text-lg font-semibold text-gray-900 ml-2">Rejected ({rejectedProjects.length})</Text>
+            </View>
+            {rejectedProjects.map(renderProject)}
+          </View>
+        )}
+
+        {/* Completed Projects */}
+        {completedProjects.length > 0 && (
+          <View>
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="trophy" size={20} color="#3B82F6" />
+              <Text className="text-lg font-semibold text-gray-900 ml-2">Completed ({completedProjects.length})</Text>
+            </View>
+            {completedProjects.map(renderProject)}
+          </View>
+        )}
+
+        {userProjects.length === 0 && (
+          <View className="bg-white rounded-2xl p-8 items-center">
+            <Ionicons name="briefcase-outline" size={48} color="#9CA3AF" />
+            <Text className="text-gray-500 text-lg font-medium mt-4">No applications yet</Text>
+            <Text className="text-gray-400 text-center mt-2">
+              Start browsing available tasks to begin your freelancing journey!
+            </Text>
+          </View>
+        )}
+      </View>
+    )
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -282,21 +312,24 @@ const ProfileScreen = () => {
 
           {/* Stats */}
           <View className="flex-row justify-around border-t border-gray-100 pt-4">
-            <View className="items-center">
-              <Text className="text-2xl font-bold text-gray-900">{userProjects.length}</Text>
-              <Text className="text-gray-500 text-sm">Total Projects</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-2xl font-bold text-green-600">{completedProjects.length}</Text>
-              <Text className="text-gray-500 text-sm">Completed</Text>
-            </View>
-            <View className="items-center">
-              <View className="flex-row items-center">
-                <Text className="text-2xl font-bold text-yellow-500 mr-1">{averageRating.toFixed(1)}</Text>
-                <Ionicons name="star" size={20} color="#F59E0B" />
-              </View>
-              <Text className="text-gray-500 text-sm">Avg Rating</Text>
-            </View>
+            {loading ? (
+              <ActivityIndicator size="small" color="#3B82F6" />
+            ) : (
+              <>
+                <View className="items-center">
+                  <Text className="text-2xl font-bold text-gray-900">{userProjects.length}</Text>
+                  <Text className="text-gray-500 text-sm">Applications</Text>
+                </View>
+                <View className="items-center">
+                  <Text className="text-2xl font-bold text-green-600">{acceptedProjects.length}</Text>
+                  <Text className="text-gray-500 text-sm">Accepted</Text>
+                </View>
+                <View className="items-center">
+                  <Text className="text-2xl font-bold text-yellow-500">{pendingProjects.length}</Text>
+                  <Text className="text-gray-500 text-sm">Pending</Text>
+                </View>
+              </>
+            )}
           </View>
         </View>
 
