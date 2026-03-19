@@ -90,74 +90,18 @@ const SignIn = () => {
         {/* ── Form Section ── */}
         <View className="px-6 pt-8 pb-6">
 
-          {/* Input Fields Container */}
-          <View
-            className="bg-white rounded-[20px] border border-gray-100 p-5"
-            style={{
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.03,
-              shadowRadius: 12,
-              elevation: 2,
-            }}
-          >
-            <InputField
-              label="Email"
-              placeholder="Enter email"
-              icon={icons.email}
-              textContentType="emailAddress"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={form.email}
-              onChangeText={(value: string) => setForm({ ...form, email: value })}
-            />
-
-            <View className="h-2" />
-
-            <InputField
-              label="Password"
-              placeholder="Enter password"
-              icon={icons.lock}
-              secureTextEntry
-              textContentType="password"
-              value={form.password}
-              onChangeText={(value: string) => setForm({ ...form, password: value })}
-            />
-          </View>
-
-          {/* Sign In Button */}
-          <View className="mt-6">
-            <CustomButton
-              title={loading ? "Signing In..." : "Sign In"}
-              onPress={onSignInPress}
-              className="mt-0"
-              disabled={loading}
-            />
-          </View>
 
           {/* Divider */}
           <View className="flex-row items-center mt-7 mb-1">
             <View className="flex-1 h-px bg-gray-100" />
             <Text className="font-quicksand-medium px-4 text-[13px] text-gray-300 tracking-[0.5px] uppercase">
-              or
+              
             </Text>
             <View className="flex-1 h-px bg-gray-100" />
           </View>
 
           <OAuth />
 
-          {/* Sign Up Link */}
-          <View className="items-center mt-8 pb-4">
-            <Link
-              href="/(auth)/signup"
-              className="font-quicksand-medium text-[15px] text-center text-gray-400"
-            >
-              Don't have an account?{" "}
-              <Text className="font-quicksand-semibold text-[#2D3F50]">
-                Sign Up
-              </Text>
-            </Link>
-          </View>
 
         </View>
       </View>
