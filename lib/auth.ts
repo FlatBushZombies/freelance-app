@@ -36,23 +36,28 @@ export const googleOAuth = async (startOAuthFlow: any) => {
 
       let isNewUser = false;
 
-      // Check if the user already exists in your backend
-      const response = await fetchAPI(`/api/user/${user?.id}`, {
-        method: "GET",
-      });
+      // Session is already active here; backend sync failures should not fail login UX.
+      try {
+        const response = await fetch(
+          `https://quickhands-api.vercel.app/api/user/get?clerkId=${user?.id}`,
+          { method: "GET" }
+        );
+        const data = await response.json();
 
-      if (response.status === 404) {
-        // Create new user record
-        await fetchAPI("/api/user", {
-          method: "POST",
-          body: JSON.stringify({
-            name: `${user?.firstName || ""} ${user?.lastName || ""}`,
-            email: user?.primaryEmailAddress?.emailAddress,
-            clerkId: user?.id,
-          }),
-        });
+        if (!response.ok || !data?.user) {
+          await fetchAPI("/api/user", {
+            method: "POST",
+            body: JSON.stringify({
+              name: `${user?.firstName || ""} ${user?.lastName || ""}`,
+              email: user?.primaryEmailAddress?.emailAddress,
+              clerkId: user?.id,
+            }),
+          });
 
-        isNewUser = true;
+          isNewUser = true;
+        }
+      } catch (syncError) {
+        console.error("User sync error after OAuth session activation:", syncError);
       }
 
       return {

@@ -11,6 +11,7 @@ import {
   RefreshControl 
 } from "react-native"
 import { BellIcon } from "react-native-heroicons/outline"
+import { useAuth } from "@clerk/clerk-expo"
 
 interface Notification {
   id: number
@@ -30,12 +31,19 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
   const [unreadCount, setUnreadCount] = useState(0)
   const [modalVisible, setModalVisible] = useState(false)
   const [loading, setLoading] = useState(true)
+  const { getToken } = useAuth()
 
 
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch(`https://quickhands-api.vercel.app/api/notifications/by-clerk/${userId}`)
+      const token = await getToken()
+      const response = await fetch(
+        `https://quickhands-api.vercel.app/api/notifications/by-clerk/${userId}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      )
       const data = await response.json()
 
       if (data.success && Array.isArray(data.notifications)) {
@@ -50,7 +58,7 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
     } finally {
       setLoading(false)
     }
-  }, [userId])
+  }, [userId, getToken])
 
   
   // Poll for notifications every 10 seconds
@@ -72,9 +80,13 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
   // ✅ Mark notification as read
   const markAsRead = async (notificationId: number) => {
     try {
+      const token = await getToken()
       const response = await fetch(`https://quickhands-api.vercel.app/api/notifications/${notificationId}/read`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       })
 
       if (response.ok) {
@@ -250,7 +262,7 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
                   No notifications yet
                 </Text>
                 <Text style={{ fontSize: 15, color: "#6B7280", textAlign: "center", lineHeight: 22 }}>
-                  You'll be notified when clients{"\n"}respond to your applications
+                  You&apos;ll be notified when clients{"\n"}respond to your applications
                 </Text>
               </View>
             ) : (

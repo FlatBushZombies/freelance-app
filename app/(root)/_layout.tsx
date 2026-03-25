@@ -20,14 +20,14 @@ const TabIcon = ({
   <View style={{ alignItems: "center", justifyContent: "center", flex: 1, minWidth: 56 }}>
     <Icon
       size={22}
-      color={focused ? "#E50914" : "#6B7280"}
+      color={focused ? "#708238" : "#6B7280"}
       strokeWidth={focused ? 2.5 : 1.8}
     />
     <Text
       style={{
         fontSize: 10,
         fontWeight: focused ? "600" : "400",
-        color: focused ? "#E50914" : "#6B7280",
+        color: focused ? "#708238" : "#6B7280",
         marginTop: 4,
         letterSpacing: 0.2,
       }}
@@ -38,7 +38,7 @@ const TabIcon = ({
 )
 
 export default function Layout() {
-  const { isLoaded, isSignedIn, user } = useUser()
+  const { isLoaded, isSignedIn } = useUser()
   const [isNavigationReady, setIsNavigationReady] = useState(false)
 
   useEffect(() => {
@@ -49,17 +49,13 @@ export default function Layout() {
   useEffect(() => {
     if (!isLoaded || !isNavigationReady) return
     if (!isSignedIn) { router.replace("/"); return }
-
-    const createdAt = user?.createdAt ? new Date(user.createdAt) : null
-    const isNewUser = createdAt !== null && Date.now() - createdAt.getTime() < 60 * 1000
-    if (isNewUser) router.replace("/(auth)/onboarding")
-  }, [isLoaded, isSignedIn, user, isNavigationReady])
+  }, [isLoaded, isSignedIn, isNavigationReady])
 
   if (!isLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
         <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: "#111", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-          <ActivityIndicator size="small" color="#E50914" />
+          <ActivityIndicator size="small" color="#708238" />
         </View>
         <Text style={{ color: "#6B7280", fontSize: 13, fontWeight: "500", letterSpacing: 0.3 }}>
           Loading...
@@ -86,7 +82,7 @@ export default function Layout() {
           shadowRadius: 16,
           elevation: 12,
         },
-        tabBarActiveTintColor: "#E50914",
+        tabBarActiveTintColor: "#708238",
         tabBarInactiveTintColor: "#6B7280",
       }}
     >

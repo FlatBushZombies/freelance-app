@@ -17,7 +17,8 @@ const SignIn = () => {
 
   useEffect(() => {
     if (!isLoaded) return
-    if (isSignedIn) router.replace("/(root)/home")
+    // Always go through index route so onboarding check runs consistently.
+    if (isSignedIn) router.replace("/")
   }, [isLoaded, isSignedIn])
 
   const onSignInPress = useCallback(async () => {

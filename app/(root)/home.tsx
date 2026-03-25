@@ -42,7 +42,6 @@ const C = {
   fog:       "#EBEff2",
   gold:      "#C9A84C",
   goldLight: "#FBF5E6",
-  // Primary green for CTA
   green:     "#2E7D52",
   greenLight:"#E8F5EE",
   greenMid:  "#3D9966",
@@ -68,6 +67,10 @@ const shadow = {
   sm: Platform.select({
     ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6 },
     android: { elevation: 1 },
+  }),
+  lifted: Platform.select({
+    ios: { shadowColor: "#2D4A6A", shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.12, shadowRadius: 32 },
+    android: { elevation: 8 },
   }),
 }
 
@@ -236,9 +239,13 @@ const Home = () => {
     if (!selectedJob || !user?.id) return
     setApplyingJobs((s) => new Set(s).add(selectedJob.id))
     try {
+      const token = await user.getIdToken()
       const response = await fetch(`https://quickhands-api.vercel.app/api/jobs/${selectedJob.id}/apply`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           userId: user.id,
           jobId: selectedJob.id,
@@ -292,7 +299,7 @@ const Home = () => {
     }
   }
 
-  /* ─────────────────── Job Card ─────────────────── */
+  /* ─────────────────── Job Card — Premium Redesign ─────────────────── */
   const renderJobCard = ({ item }: { item: Job }) => {
     const isApplied  = appliedJobs.has(item.id)
     const isApplying = applyingJobs.has(item.id)
@@ -300,269 +307,688 @@ const Home = () => {
 
     return (
       <TouchableOpacity
-        activeOpacity={0.96}
-        className="bg-white rounded-[22px] mb-4 overflow-hidden"
-        style={{ borderWidth: 1.5, borderColor: item.isMatch ? `${C.fern}30` : C.fog, ...shadow.card }}
+        activeOpacity={0.97}
+        style={{
+          backgroundColor: C.cloud,
+          borderRadius: 20,
+          marginBottom: 14,
+          overflow: "hidden",
+          borderWidth: 1,
+          borderColor: item.isMatch ? `${C.fern}28` : "rgba(0,0,0,0.055)",
+          ...shadow.lifted,
+        }}
       >
-        {item.isMatch && <View className="h-[3px] w-full" style={{ backgroundColor: C.fern }} />}
+        {/* Match accent — refined hairline with gradient feel */}
+        {item.isMatch && (
+          <View style={{
+            height: 2,
+            backgroundColor: C.fern,
+            opacity: 0.7,
+          }} />
+        )}
 
-        <View className="p-5">
-          {/* Row 1: Avatar + meta + badge + time */}
-          <View className="flex-row items-center mb-4">
-            <View
-              className="w-11 h-11 rounded-[14px] items-center justify-center mr-3 overflow-hidden"
-              style={{ backgroundColor: item.isMatch ? C.mint : C.fog, borderWidth: 1.5, borderColor: item.isMatch ? `${C.fern}40` : C.fog }}
-            >
+        <View style={{ padding: 22 }}>
+
+          {/* ── Top row: Avatar + Client + Time ── */}
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 18 }}>
+
+            {/* Avatar — square with refined radius */}
+            <View style={{
+              width: 42,
+              height: 42,
+              borderRadius: 13,
+              backgroundColor: item.isMatch ? C.mint : C.fog,
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: 12,
+              overflow: "hidden",
+              borderWidth: 1,
+              borderColor: item.isMatch ? `${C.fern}30` : "rgba(0,0,0,0.04)",
+            }}>
               {item.clientAvatar ? (
-                <Image source={{ uri: item.clientAvatar }} style={{ width: 44, height: 44 }} resizeMode="cover" />
+                <Image source={{ uri: item.clientAvatar }} style={{ width: 42, height: 42 }} resizeMode="cover" />
               ) : (
-                <Text className="font-quicksand-bold text-[15px] tracking-[-0.3px]" style={{ color: item.isMatch ? C.forest : C.stone }}>
+                <Text style={{
+                  fontFamily: "Quicksand-Bold",
+                  fontSize: 16,
+                  color: item.isMatch ? C.forest : C.stone,
+                  letterSpacing: -0.3,
+                }}>
                   {item.clientName.charAt(0).toUpperCase()}
                 </Text>
               )}
             </View>
 
-            <View className="flex-1">
-              <Text className="font-quicksand-bold text-[13px] tracking-[-0.1px]" style={{ color: C.ink }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{
+                fontFamily: "Quicksand-Bold",
+                fontSize: 13,
+                color: C.ink,
+                letterSpacing: -0.1,
+                marginBottom: 3,
+              }}>
                 {item.clientName}
               </Text>
-              <View className="flex-row items-center mt-[3px] gap-1.5">
-                <Text className="font-quicksand text-[11px]" style={{ color: C.pebble }}>📍 {item.location}</Text>
-                <View className="w-[2px] h-[2px] rounded-full" style={{ backgroundColor: C.pebble }} />
-                <Text className="font-quicksand text-[11px]" style={{ color: C.pebble }}>{timeAgo(item.createdAt)}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text style={{ fontFamily: "Quicksand-Medium", fontSize: 11.5, color: C.pebble }}>
+                  📍 {item.location}
+                </Text>
+                <View style={{ width: 2, height: 2, borderRadius: 1, backgroundColor: C.pebble, opacity: 0.5 }} />
+                <Text style={{ fontFamily: "Quicksand-Medium", fontSize: 11.5, color: C.pebble }}>
+                  {timeAgo(item.createdAt)}
+                </Text>
               </View>
             </View>
 
+            {/* Match badge — pill, refined */}
             {item.isMatch && (
-              <View className="flex-row items-center gap-1 px-2.5 py-[5px] rounded-full border" style={{ backgroundColor: `${C.fern}18`, borderColor: `${C.fern}30` }}>
-                <View className="w-[5px] h-[5px] rounded-full" style={{ backgroundColor: C.fern }} />
-                <Text className="font-quicksand-bold text-[10px] tracking-[0.4px]" style={{ color: C.forest }}>MATCH</Text>
+              <View style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 5,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 20,
+                backgroundColor: `${C.fern}14`,
+                borderWidth: 1,
+                borderColor: `${C.fern}28`,
+              }}>
+                <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.fern }} />
+                <Text style={{
+                  fontFamily: "Quicksand-Bold",
+                  fontSize: 9.5,
+                  letterSpacing: 0.8,
+                  color: C.forest,
+                  textTransform: "uppercase",
+                }}>
+                  Match
+                </Text>
               </View>
             )}
           </View>
 
-          <Text className="font-quicksand-bold text-[18px] mb-2 leading-[25px] tracking-[-0.5px]" style={{ color: C.ink }}>
+          {/* ── Job Title — editorial weight ── */}
+          <Text style={{
+            fontFamily: "Quicksand-Bold",
+            fontSize: 19,
+            color: C.ink,
+            letterSpacing: -0.7,
+            lineHeight: 26,
+            marginBottom: 9,
+          }}>
             {item.title}
           </Text>
 
-          <Text numberOfLines={2} className="font-quicksand text-sm leading-[22px] mb-4 tracking-[0.1px]" style={{ color: C.stone }}>
+          {/* ── Description ── */}
+          <Text
+            numberOfLines={2}
+            style={{
+              fontFamily: "Quicksand-Medium",
+              fontSize: 13.5,
+              lineHeight: 21,
+              color: C.stone,
+              letterSpacing: 0.05,
+              marginBottom: 16,
+            }}
+          >
             {item.description}
           </Text>
 
-          {/* Tags */}
-          <View className="flex-row flex-wrap gap-1.5 mb-[18px]">
+          {/* ── Tags — refined pills ── */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
             {tags.map((tag, i) => (
               <View
                 key={i}
-                className="px-3 py-1.5 rounded-lg border"
-                style={{ backgroundColor: i === 0 && item.isMatch ? C.mint : C.fog, borderColor: i === 0 && item.isMatch ? `${C.fern}25` : "rgba(0,0,0,0.03)" }}
+                style={{
+                  paddingHorizontal: 11,
+                  paddingVertical: 5,
+                  borderRadius: 8,
+                  backgroundColor: i === 0 && item.isMatch ? C.mint : C.mist,
+                  borderWidth: 1,
+                  borderColor: i === 0 && item.isMatch ? `${C.fern}22` : "transparent",
+                }}
               >
-                <Text className="font-quicksand-semibold text-[11px] tracking-[0.2px]" style={{ color: i === 0 && item.isMatch ? C.forest : C.stone }}>
+                <Text style={{
+                  fontFamily: "Quicksand-SemiBold",
+                  fontSize: 11,
+                  letterSpacing: 0.15,
+                  color: i === 0 && item.isMatch ? C.forest : C.stone,
+                }}>
                   {tag.trim()}
                 </Text>
               </View>
             ))}
           </View>
 
-          {/* Budget + Apply */}
-          <View className="flex-row items-center justify-between pt-4" style={{ borderTopWidth: 1, borderTopColor: C.fog }}>
+          {/* ── Divider ── */}
+          <View style={{ height: 1, backgroundColor: C.fog, marginBottom: 18 }} />
+
+          {/* ── Budget + Apply ── */}
+          <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
+
+            {/* Budget block */}
             <View>
-              <Text className="font-quicksand-bold text-[10px] tracking-[1.2px] uppercase mb-1" style={{ color: C.pebble }}>Budget</Text>
-              <View className="flex-row items-baseline gap-[1px]">
-                <Text className="font-quicksand-bold text-[13px] mb-0.5" style={{ color: C.moss }}>$</Text>
-                <Text className="font-quicksand-bold text-[28px] tracking-[-1.2px]" style={{ color: C.ink }}>{item.budget}</Text>
+              <Text style={{
+                fontFamily: "Quicksand-Bold",
+                fontSize: 9.5,
+                letterSpacing: 1.5,
+                textTransform: "uppercase",
+                color: C.pebble,
+                marginBottom: 4,
+              }}>
+                Budget
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                <Text style={{
+                  fontFamily: "Quicksand-Bold",
+                  fontSize: 13,
+                  color: C.moss,
+                  marginTop: 4,
+                  marginRight: 1,
+                }}>$</Text>
+                <Text style={{
+                  fontFamily: "Quicksand-Bold",
+                  fontSize: 34,
+                  color: C.ink,
+                  letterSpacing: -1.8,
+                  lineHeight: 38,
+                }}>
+                  {item.budget}
+                </Text>
               </View>
             </View>
 
+            {/* Apply button — premium feel */}
             <TouchableOpacity
               onPress={() => handleApply(item)}
               disabled={isApplied || isApplying}
-              activeOpacity={0.82}
-              className="flex-row items-center gap-[7px] rounded-[14px]"
-              style={{ paddingHorizontal: isApplied ? 18 : 26, paddingVertical: 14, backgroundColor: isApplied ? C.mint : C.forest, borderWidth: isApplied ? 1.5 : 0, borderColor: isApplied ? `${C.fern}40` : "transparent", ...(isApplied ? {} : shadow.btn) }}
+              activeOpacity={0.8}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 7,
+                paddingHorizontal: isApplied ? 18 : 24,
+                paddingVertical: 13,
+                borderRadius: 14,
+                backgroundColor: isApplied ? C.mint : C.forest,
+                borderWidth: isApplied ? 1.5 : 0,
+                borderColor: isApplied ? `${C.fern}40` : "transparent",
+                ...(isApplied ? {} : shadow.btn),
+              }}
             >
               {isApplying ? (
                 <ActivityIndicator size="small" color={isApplied ? C.forest : C.cloud} />
               ) : (
                 <>
                   {isApplied && (
-                    <View className="w-[18px] h-[18px] rounded-full items-center justify-center" style={{ backgroundColor: C.fern }}>
-                      <Text className="font-quicksand-bold text-[10px]" style={{ color: C.cloud }}>✓</Text>
+                    <View style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 9,
+                      backgroundColor: C.fern,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}>
+                      <Text style={{ fontFamily: "Quicksand-Bold", fontSize: 10, color: C.cloud }}>✓</Text>
                     </View>
                   )}
-                  <Text className="font-quicksand-bold text-sm tracking-[0.2px]" style={{ color: isApplied ? C.forest : C.cloud }}>
+                  <Text style={{
+                    fontFamily: "Quicksand-Bold",
+                    fontSize: 13.5,
+                    letterSpacing: 0.15,
+                    color: isApplied ? C.forest : C.cloud,
+                  }}>
                     {isApplied ? "Applied" : "Apply Now"}
                   </Text>
                 </>
               )}
             </TouchableOpacity>
           </View>
+
         </View>
       </TouchableOpacity>
     )
   }
 
-  /* ─────────────────── Stats Card ─────────────────── */
+  /* ─────────────────── Stats Card — Premium Redesign ─────────────────── */
   const StatsCard = () => (
-    <View className="rounded-[28px] p-[26px] mb-3.5 overflow-hidden border" style={{ backgroundColor: C.charcoal, borderColor: `${C.forest}60`, ...shadow.dark }}>
-      <View className="absolute left-8 right-8 h-[2px] rounded-b-sm opacity-80" style={{ top: 0, backgroundColor: C.fern }} />
+    <View style={{
+      borderRadius: 28,
+      marginBottom: 14,
+      overflow: "hidden",
+      backgroundColor: C.charcoal,
+      borderWidth: 1,
+      borderColor: `${C.forest}55`,
+      ...shadow.dark,
+    }}>
+      {/* Top accent bar */}
+      <View style={{ height: 2, backgroundColor: C.fern, opacity: 0.75 }} />
 
-      <View className="flex-row items-center justify-between mb-7">
-        <View className="flex-row items-center gap-[9px]">
-          <View className="w-2 h-2 rounded-full" style={{ backgroundColor: C.fern }} />
-          <Text className="font-quicksand-bold text-[17px] tracking-[-0.4px]" style={{ color: C.cloud }}>Overview</Text>
-        </View>
-        <TouchableOpacity activeOpacity={0.7} className="px-3.5 py-[7px] rounded-[10px] border" style={{ backgroundColor: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.08)" }}>
-          <Text className="font-quicksand-semibold text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>All Time</Text>
-        </TouchableOpacity>
-      </View>
+      <View style={{ padding: 26 }}>
 
-      <Text className="font-quicksand-bold text-[10px] tracking-[1.8px] uppercase mb-2.5" style={{ color: C.pebble }}>Total Earnings</Text>
-      <Text className="font-quicksand-bold text-[44px] mb-2.5 tracking-[-2.5px]" style={{ color: C.cloud }}>
-        $9,787<Text className="font-quicksand-bold text-[30px]" style={{ color: `${C.sage}50` }}>.32</Text>
-      </Text>
-
-      <View className="flex-row items-center gap-2.5 mb-8">
-        <View className="px-2.5 py-1 rounded-lg border" style={{ backgroundColor: `${C.fern}22`, borderColor: `${C.fern}30` }}>
-          <Text className="font-quicksand-bold text-xs" style={{ color: C.leaf }}>+$2,456.12</Text>
-        </View>
-        <Text className="font-quicksand-medium text-[13px]" style={{ color: "rgba(255,255,255,0.25)" }}>this month</Text>
-      </View>
-
-      <View className="flex-row gap-2.5 mb-4">
-        {[
-          { value: "36", label: "Projects", sub: "5 this month", dot: C.fern },
-          { value: "10", label: "Clients",  sub: "3 this month", dot: C.sage },
-        ].map((stat, i) => (
-          <View key={i} className="flex-1 rounded-[18px] p-5 border" style={{ backgroundColor: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.06)" }}>
-            <Text className="font-quicksand-bold text-[32px] mb-[5px] tracking-[-1.5px]" style={{ color: C.cloud }}>{stat.value}</Text>
-            <Text className="font-quicksand-semibold text-[13px]" style={{ color: "rgba(255,255,255,0.4)" }}>{stat.label}</Text>
-            <View className="flex-row items-center mt-2.5 gap-[5px]">
-              <View className="w-[5px] h-[5px] rounded-full" style={{ backgroundColor: stat.dot }} />
-              <Text className="font-quicksand text-[11px]" style={{ color: "rgba(255,255,255,0.22)" }}>{stat.sub}</Text>
-            </View>
+        {/* Header */}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 30 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+            <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.fern }} />
+            <Text style={{
+              fontFamily: "Quicksand-Bold",
+              fontSize: 17,
+              letterSpacing: -0.5,
+              color: C.cloud,
+            }}>
+              Overview
+            </Text>
           </View>
-        ))}
-      </View>
-
-      <View className="rounded-[18px] p-5 flex-row items-center justify-between mb-5 border" style={{ backgroundColor: C.goldLight, borderColor: `${C.gold}25` }}>
-        <View>
-          <Text className="font-quicksand-bold text-[22px] tracking-[-0.6px]" style={{ color: C.ink }}>5th place</Text>
-          <Text className="font-quicksand-medium text-[13px] mt-[3px]" style={{ color: "#9A8A6A" }}>Top-hire freelancers</Text>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={{
+              paddingHorizontal: 14,
+              paddingVertical: 7,
+              borderRadius: 10,
+              backgroundColor: "rgba(255,255,255,0.06)",
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.08)",
+            }}
+          >
+            <Text style={{ fontFamily: "Quicksand-SemiBold", fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+              All Time
+            </Text>
+          </TouchableOpacity>
         </View>
-        <View className="w-[52px] h-[52px] rounded-[18px] items-center justify-center border" style={{ backgroundColor: "#FDF0CC", borderColor: `${C.gold}30` }}>
-          <Text className="text-[26px]">🏆</Text>
-        </View>
-      </View>
 
-      <View className="flex-row items-center justify-between mb-3">
-        <Text className="font-quicksand-bold text-[13px]" style={{ color: C.cloud }}>Availability</Text>
-        <Text className="font-quicksand-medium text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>100h / month</Text>
-      </View>
-      <View className="flex-row gap-0.5">
-        {[...Array(30)].map((_, i) => (
-          <View key={i} className="flex-1 h-7 rounded-[4px]" style={{ backgroundColor: i < 22 ? `rgba(82, 131, 155, ${0.15 + (i / 30) * 0.85})` : "rgba(255,255,255,0.05)" }} />
-        ))}
+        {/* Earnings */}
+        <Text style={{
+          fontFamily: "Quicksand-Bold",
+          fontSize: 10,
+          letterSpacing: 2,
+          textTransform: "uppercase",
+          color: C.pebble,
+          marginBottom: 10,
+        }}>
+          Total Earnings
+        </Text>
+
+        {/* Large number — split whole/decimal for visual hierarchy */}
+        <View style={{ flexDirection: "row", alignItems: "flex-end", marginBottom: 12 }}>
+          <Text style={{
+            fontFamily: "Quicksand-Bold",
+            fontSize: 52,
+            letterSpacing: -3,
+            lineHeight: 52,
+            color: C.cloud,
+          }}>
+            $9,787
+          </Text>
+          <Text style={{
+            fontFamily: "Quicksand-Bold",
+            fontSize: 32,
+            letterSpacing: -1.5,
+            lineHeight: 44,
+            color: `${C.sage}45`,
+          }}>
+            .32
+          </Text>
+        </View>
+
+        {/* Growth tag */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 32 }}>
+          <View style={{
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 8,
+            backgroundColor: `${C.fern}20`,
+            borderWidth: 1,
+            borderColor: `${C.fern}28`,
+          }}>
+            <Text style={{ fontFamily: "Quicksand-Bold", fontSize: 12, color: C.leaf }}>+$2,456.12</Text>
+          </View>
+          <Text style={{ fontFamily: "Quicksand-Medium", fontSize: 13, color: "rgba(255,255,255,0.22)" }}>
+            this month
+          </Text>
+        </View>
+
+        {/* Stat tiles */}
+        <View style={{ flexDirection: "row", gap: 10, marginBottom: 14 }}>
+          {[
+            { value: "36", label: "Projects", sub: "5 this month", dot: C.fern },
+            { value: "10", label: "Clients",  sub: "3 this month", dot: C.sage },
+          ].map((stat, i) => (
+            <View key={i} style={{
+              flex: 1,
+              borderRadius: 18,
+              padding: 18,
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.07)",
+            }}>
+              <Text style={{
+                fontFamily: "Quicksand-Bold",
+                fontSize: 36,
+                letterSpacing: -2,
+                lineHeight: 40,
+                color: C.cloud,
+                marginBottom: 4,
+              }}>
+                {stat.value}
+              </Text>
+              <Text style={{
+                fontFamily: "Quicksand-SemiBold",
+                fontSize: 13,
+                color: "rgba(255,255,255,0.38)",
+              }}>
+                {stat.label}
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 10, gap: 5 }}>
+                <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: stat.dot }} />
+                <Text style={{ fontFamily: "Quicksand-Medium", fontSize: 11, color: "rgba(255,255,255,0.2)" }}>
+                  {stat.sub}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Ranking tile — gold accent */}
+        <View style={{
+          borderRadius: 18,
+          padding: 18,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          backgroundColor: C.goldLight,
+          borderWidth: 1,
+          borderColor: `${C.gold}22`,
+          marginBottom: 22,
+        }}>
+          <View>
+            <Text style={{
+              fontFamily: "Quicksand-Bold",
+              fontSize: 22,
+              letterSpacing: -0.6,
+              color: C.ink,
+            }}>
+              5th place
+            </Text>
+            <Text style={{
+              fontFamily: "Quicksand-Medium",
+              fontSize: 13,
+              color: "#9A8A6A",
+              marginTop: 2,
+            }}>
+              Top-hire freelancers
+            </Text>
+          </View>
+          <View style={{
+            width: 52,
+            height: 52,
+            borderRadius: 16,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#FDF0CC",
+            borderWidth: 1,
+            borderColor: `${C.gold}28`,
+          }}>
+            <Text style={{ fontSize: 26 }}>🏆</Text>
+          </View>
+        </View>
+
+        {/* Availability bar */}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <Text style={{ fontFamily: "Quicksand-Bold", fontSize: 13, color: C.cloud }}>Availability</Text>
+          <Text style={{ fontFamily: "Quicksand-Medium", fontSize: 12, color: "rgba(255,255,255,0.28)" }}>
+            100h / month
+          </Text>
+        </View>
+        <View style={{ flexDirection: "row", gap: 2 }}>
+          {[...Array(30)].map((_, i) => (
+            <View
+              key={i}
+              style={{
+                flex: 1,
+                height: 28,
+                borderRadius: 4,
+                backgroundColor: i < 22
+                  ? `rgba(82, 131, 155, ${0.15 + (i / 30) * 0.85})`
+                  : "rgba(255,255,255,0.05)",
+              }}
+            />
+          ))}
+        </View>
+
       </View>
     </View>
   )
 
-  /* ─────────────────── CTA Card ─────────────────── */
+  /* ─────────────────── CTA Card — Premium Redesign ─────────────────── */
   const CTACard = () => (
-    <View className="rounded-[28px] mb-3.5 overflow-hidden" style={{ backgroundColor: C.forest, ...shadow.dark }}>
+    <View style={{
+      borderRadius: 28,
+      marginBottom: 14,
+      overflow: "hidden",
+      backgroundColor: C.forest,
+      ...shadow.dark,
+    }}>
       {/* Decorative blobs */}
-      <View className="absolute w-40 h-40 rounded-full" style={{ top: -50, right: -50, backgroundColor: `${C.fern}18` }} />
-      <View className="absolute w-[120px] h-[120px] rounded-full" style={{ bottom: -30, left: -30, backgroundColor: `${C.leaf}12` }} />
+      <View style={{
+        position: "absolute",
+        width: 160,
+        height: 160,
+        borderRadius: 80,
+        top: -55,
+        right: -55,
+        backgroundColor: `${C.fern}18`,
+      }} />
+      <View style={{
+        position: "absolute",
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        bottom: -30,
+        left: -30,
+        backgroundColor: `${C.leaf}12`,
+      }} />
 
-      {/* Illustration — full-width, no horizontal padding, flush to top */}
+      {/* Hero image — flush, full width */}
       <Image
         source={require("@/assets/images/empty-jobs.jpg")}
         style={{ width: "100%", height: 200 }}
         resizeMode="cover"
       />
 
-      {/* Text content */}
-      <View className="px-8 pt-6 pb-8 items-center">
-        <View className="w-16 h-16 rounded-[22px] items-center justify-center mb-[22px] border-[1.5px]" style={{ backgroundColor: `${C.green}30`, borderColor: `${C.green}50` }}>
-          <Text className="text-[28px]">🔗</Text>
+      <View style={{ paddingHorizontal: 28, paddingTop: 28, paddingBottom: 30, alignItems: "center" }}>
+
+        {/* Icon lockup */}
+        <View style={{
+          width: 60,
+          height: 60,
+          borderRadius: 20,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: `${C.green}2E`,
+          borderWidth: 1.5,
+          borderColor: `${C.green}50`,
+          marginBottom: 20,
+        }}>
+          <Text style={{ fontSize: 27 }}>🔗</Text>
         </View>
-        <Text className="font-quicksand-bold text-2xl text-center mb-3 tracking-[-0.8px] leading-[30px]" style={{ color: C.cloud }}>
+
+        {/* Headline — generous tracking for premium feel */}
+        <Text style={{
+          fontFamily: "Quicksand-Bold",
+          fontSize: 24,
+          textAlign: "center",
+          letterSpacing: -0.9,
+          lineHeight: 31,
+          color: C.cloud,
+          marginBottom: 12,
+        }}>
           Get new clients{"\n"}2× faster
         </Text>
-        <Text className="font-quicksand text-sm text-center leading-[22px] px-2.5 mb-7" style={{ color: `${C.sage}CC` }}>
+
+        <Text style={{
+          fontFamily: "Quicksand-Medium",
+          fontSize: 14,
+          textAlign: "center",
+          lineHeight: 22,
+          color: `${C.sage}C0`,
+          paddingHorizontal: 8,
+          marginBottom: 26,
+        }}>
           Join us today and unlock opportunities to land new clients twice as fast!
         </Text>
+
+        {/* CTA button — full-width, elevated green */}
         <TouchableOpacity
           activeOpacity={0.85}
-          className="py-4 px-8 rounded-[14px] w-full items-center"
           style={{
+            paddingVertical: 15,
+            paddingHorizontal: 32,
+            borderRadius: 14,
+            width: "100%",
+            alignItems: "center",
             backgroundColor: C.green,
             ...shadow.btnGreen,
           }}
         >
-          <Text className="font-quicksand-bold text-[15px] tracking-[0.3px]" style={{ color: C.cloud }}>Join now →</Text>
+          <Text style={{
+            fontFamily: "Quicksand-Bold",
+            fontSize: 15,
+            letterSpacing: 0.3,
+            color: C.cloud,
+          }}>
+            Join now →
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
   )
 
-  /* ─────────────────── Income Card ─────────────────── */
+  /* ─────────────────── Income Card — Premium Redesign ─────────────────── */
   const IncomeCard = () => (
-    <View className="bg-white rounded-[28px] p-6 border-[1.5px]" style={{ borderColor: C.fog, ...shadow.card }}>
-      <View className="flex-row items-center justify-between mb-7">
-        <Text className="font-quicksand-bold text-[17px] tracking-[-0.4px]" style={{ color: C.ink }}>Income</Text>
-        <TouchableOpacity activeOpacity={0.7} className="px-3.5 py-[7px] rounded-[10px]" style={{ backgroundColor: C.fog }}>
-          <Text className="font-quicksand-semibold text-xs" style={{ color: C.stone }}>Monthly</Text>
+    <View style={{
+      backgroundColor: C.cloud,
+      borderRadius: 28,
+      padding: 24,
+      borderWidth: 1.5,
+      borderColor: C.fog,
+      ...shadow.card,
+    }}>
+
+      {/* Header */}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+        <Text style={{
+          fontFamily: "Quicksand-Bold",
+          fontSize: 17,
+          letterSpacing: -0.5,
+          color: C.ink,
+        }}>
+          Income
+        </Text>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 7,
+            borderRadius: 10,
+            backgroundColor: C.fog,
+          }}
+        >
+          <Text style={{ fontFamily: "Quicksand-SemiBold", fontSize: 12, color: C.stone }}>Monthly</Text>
         </TouchableOpacity>
       </View>
 
-      <View className="mb-7">
-        <View className="flex-row items-center justify-between mb-1">
-          <Text className="font-quicksand-bold text-[13px] tracking-[0.3px]" style={{ color: C.pebble }}>April</Text>
-          <View className="px-2 py-[3px] rounded-md" style={{ backgroundColor: `${C.fern}18` }}>
-            <Text className="font-quicksand-bold text-[11px]" style={{ color: C.forest }}>+18%</Text>
+      {/* April block */}
+      <View style={{ marginBottom: 24 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <Text style={{ fontFamily: "Quicksand-Bold", fontSize: 13, letterSpacing: 0.2, color: C.pebble }}>April</Text>
+          <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 7, backgroundColor: `${C.fern}18` }}>
+            <Text style={{ fontFamily: "Quicksand-Bold", fontSize: 11, color: C.forest }}>+18%</Text>
           </View>
         </View>
-        <Text className="font-quicksand-bold text-[30px] tracking-[-1.2px] mb-3.5" style={{ color: C.ink }}>$2,167.56</Text>
-        <View className="flex-row gap-[3px] h-2.5 rounded-md overflow-hidden">
-          <View className="rounded-md w-[30%]" style={{ backgroundColor: C.moss }} />
-          <View className="rounded-md w-[25%]" style={{ backgroundColor: C.fern }} />
-          <View className="rounded-md w-[20%]" style={{ backgroundColor: C.leaf }} />
-          <View className="rounded-md w-[15%]" style={{ backgroundColor: C.sage }} />
+        <Text style={{
+          fontFamily: "Quicksand-Bold",
+          fontSize: 32,
+          letterSpacing: -1.4,
+          color: C.ink,
+          marginBottom: 14,
+        }}>
+          $2,167.56
+        </Text>
+
+        {/* Segmented bar */}
+        <View style={{ flexDirection: "row", gap: 3, height: 9, borderRadius: 8, overflow: "hidden" }}>
+          <View style={{ borderRadius: 8, width: "30%", backgroundColor: C.moss }} />
+          <View style={{ borderRadius: 8, width: "25%", backgroundColor: C.fern }} />
+          <View style={{ borderRadius: 8, width: "20%", backgroundColor: C.leaf }} />
+          <View style={{ borderRadius: 8, width: "15%", backgroundColor: C.sage }} />
         </View>
-        <View className="flex-row flex-wrap gap-3.5 mt-3.5">
-          {[{ color: C.moss, label: "Design" }, { color: C.fern, label: "Dev" }, { color: C.leaf, label: "Consult" }, { color: C.sage, label: "Other" }].map((item, i) => (
-            <View key={i} className="flex-row items-center gap-[5px]">
-              <View className="w-[7px] h-[7px] rounded-full" style={{ backgroundColor: item.color }} />
-              <Text className="font-quicksand-semibold text-[11px]" style={{ color: C.pebble }}>{item.label}</Text>
+
+        {/* Legend */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 13 }}>
+          {[
+            { color: C.moss, label: "Design" },
+            { color: C.fern, label: "Dev" },
+            { color: C.leaf, label: "Consult" },
+            { color: C.sage, label: "Other" },
+          ].map((item, i) => (
+            <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: item.color }} />
+              <Text style={{ fontFamily: "Quicksand-SemiBold", fontSize: 11, color: C.pebble }}>{item.label}</Text>
             </View>
           ))}
         </View>
       </View>
 
-      <View className="h-px mb-7" style={{ backgroundColor: C.fog }} />
+      {/* Divider */}
+      <View style={{ height: 1, backgroundColor: C.fog, marginBottom: 22 }} />
 
+      {/* March block */}
       <View>
-        <Text className="font-quicksand-bold text-[13px] tracking-[0.3px] mb-1" style={{ color: C.pebble }}>March</Text>
-        <Text className="font-quicksand-bold text-[30px] tracking-[-1.2px] mb-3.5" style={{ color: C.ink }}>$1,367.50</Text>
-        <View className="flex-row gap-[3px] h-2.5 rounded-md overflow-hidden">
-          <View className="rounded-md w-[20%]" style={{ backgroundColor: C.moss }} />
-          <View className="rounded-md w-[40%]" style={{ backgroundColor: C.fern }} />
-          <View className="rounded-md w-[30%]" style={{ backgroundColor: C.leaf }} />
-          <View className="rounded-md w-[5%]"  style={{ backgroundColor: C.sage }} />
+        <Text style={{ fontFamily: "Quicksand-Bold", fontSize: 13, letterSpacing: 0.2, color: C.pebble, marginBottom: 6 }}>
+          March
+        </Text>
+        <Text style={{
+          fontFamily: "Quicksand-Bold",
+          fontSize: 32,
+          letterSpacing: -1.4,
+          color: C.ink,
+          marginBottom: 14,
+        }}>
+          $1,367.50
+        </Text>
+        <View style={{ flexDirection: "row", gap: 3, height: 9, borderRadius: 8, overflow: "hidden" }}>
+          <View style={{ borderRadius: 8, width: "20%", backgroundColor: C.moss }} />
+          <View style={{ borderRadius: 8, width: "40%", backgroundColor: C.fern }} />
+          <View style={{ borderRadius: 8, width: "30%", backgroundColor: C.leaf }} />
+          <View style={{ borderRadius: 8, width: "5%",  backgroundColor: C.sage }} />
         </View>
       </View>
+
     </View>
   )
 
   /* ─────────────────── Loading State ─────────────────── */
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center" style={{ backgroundColor: C.mist }}>
-        <View className="w-[60px] h-[60px] rounded-[20px] items-center justify-center mb-5" style={{ backgroundColor: C.forest, ...shadow.btn }}>
+      <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.mist }}>
+        <View style={{
+          width: 60,
+          height: 60,
+          borderRadius: 20,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: C.forest,
+          marginBottom: 18,
+          ...shadow.btn,
+        }}>
           <ActivityIndicator size="small" color={C.cloud} />
         </View>
-        <Text className="font-quicksand-semibold text-sm tracking-[-0.2px]" style={{ color: C.pebble }}>
+        <Text style={{
+          fontFamily: "Quicksand-SemiBold",
+          fontSize: 14,
+          letterSpacing: -0.2,
+          color: C.pebble,
+        }}>
           Loading jobs...
         </Text>
       </SafeAreaView>
@@ -573,63 +999,129 @@ const Home = () => {
 
   /* ─────────────────── Main Render ─────────────────── */
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: C.mist }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.mist }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchJobs} tintColor={C.forest} colors={[C.forest]} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={fetchJobs} tintColor={C.forest} colors={[C.forest]} />
+        }
         contentContainerStyle={{ paddingBottom: 52 }}
       >
+
         {/* ── Header ── */}
-        <View className="px-5 pt-5 pb-2">
-          <View className="flex-row justify-between items-start mb-[26px]">
-            <View className="flex-1">
-              <View className="flex-row items-center gap-1.5 mb-[7px]">
-                <View className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.fern }} />
-                <Text className="font-quicksand-semibold text-[13px] tracking-[0.2px]" style={{ color: C.pebble }}>
+        <View style={{ paddingHorizontal: 22, paddingTop: 22, paddingBottom: 4 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+
+            <View style={{ flex: 1 }}>
+              {/* Eyebrow label */}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 7 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.fern }} />
+                <Text style={{
+                  fontFamily: "Quicksand-SemiBold",
+                  fontSize: 13,
+                  letterSpacing: 0.2,
+                  color: C.pebble,
+                }}>
                   Welcome back
                 </Text>
               </View>
-              <Text className="font-quicksand-bold text-[32px] tracking-[-1.5px] leading-9" style={{ color: C.ink }}>
+              {/* Name — large editorial greeting */}
+              <Text style={{
+                fontFamily: "Quicksand-Bold",
+                fontSize: 34,
+                letterSpacing: -1.8,
+                lineHeight: 38,
+                color: C.ink,
+              }}>
                 {user?.firstName || "Freelancer"} 👋
               </Text>
             </View>
+
+            {/* Notification bell — refined container */}
             {user?.id && (
-              <View className="w-11 h-11 rounded-[14px] bg-white items-center justify-center border-[1.5px]" style={{ borderColor: C.fog, ...shadow.sm }}>
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 14,
+                backgroundColor: C.cloud,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1.5,
+                borderColor: C.fog,
+                ...shadow.sm,
+              }}>
                 <NotificationBell userId={user.id} />
               </View>
             )}
           </View>
 
-          {/* Search */}
-          <View className="bg-white rounded-2xl px-[18px] py-3.5 flex-row items-center border-[1.5px]" style={{ borderColor: C.fog, ...shadow.sm }}>
-            <Text className="text-base mr-2.5">🔍</Text>
+          {/* ── Search bar — elevated white card ── */}
+          <View style={{
+            backgroundColor: C.cloud,
+            borderRadius: 16,
+            paddingHorizontal: 18,
+            paddingVertical: 14,
+            flexDirection: "row",
+            alignItems: "center",
+            borderWidth: 1.5,
+            borderColor: C.fog,
+            ...shadow.sm,
+          }}>
+            <Text style={{ fontSize: 15, marginRight: 10 }}>🔍</Text>
             <TextInput
               value={searchQuery}
               onChangeText={(t) => { setSearchQuery(t); searchJobs(t) }}
               placeholder="Search jobs or skills..."
               placeholderTextColor={C.pebble}
-              className="font-quicksand-medium flex-1 text-sm"
-              style={{ color: C.ink }}
+              style={{
+                fontFamily: "Quicksand-Medium",
+                flex: 1,
+                fontSize: 14,
+                color: C.ink,
+              }}
             />
             {isSearching && <ActivityIndicator size="small" color={C.fern} />}
           </View>
         </View>
 
         {/* ── Content ── */}
-        <View className="px-5 pt-[26px]">
-          <View className="flex-row items-center justify-between mb-4">
-            <Text className="font-quicksand-bold text-[22px] tracking-[-0.8px]" style={{ color: C.ink }}>
+        <View style={{ paddingHorizontal: 22, paddingTop: 28 }}>
+
+          {/* Section header */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <Text style={{
+              fontFamily: "Quicksand-Bold",
+              fontSize: 22,
+              letterSpacing: -0.9,
+              color: C.ink,
+            }}>
               Available Jobs
             </Text>
-            <View className="px-3 py-[5px] rounded-full" style={{ backgroundColor: C.forest }}>
-              <Text className="font-quicksand-bold text-xs tracking-[0.3px]" style={{ color: C.cloud }}>
+            {/* Count badge */}
+            <View style={{
+              paddingHorizontal: 12,
+              paddingVertical: 5,
+              borderRadius: 20,
+              backgroundColor: C.forest,
+            }}>
+              <Text style={{
+                fontFamily: "Quicksand-Bold",
+                fontSize: 12,
+                letterSpacing: 0.3,
+                color: C.cloud,
+              }}>
                 {filteredJobs.length}
               </Text>
             </View>
           </View>
 
-          {/* Filter chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 22 }} contentContainerStyle={{ gap: 8 }}>
+          {/* ── Filter chips — refined ── */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginBottom: 22 }}
+            contentContainerStyle={{ gap: 8 }}
+          >
             {filters.map((filter) => {
               const isActive = activeFilter === filter
               return (
@@ -637,10 +1129,22 @@ const Home = () => {
                   key={filter}
                   activeOpacity={0.8}
                   onPress={() => setActiveFilter(filter)}
-                  className="px-[18px] py-2.5 rounded-xl border-[1.5px]"
-                  style={{ backgroundColor: isActive ? C.forest : C.cloud, borderColor: isActive ? C.forest : C.fog, ...(!isActive ? shadow.sm : {}) }}
+                  style={{
+                    paddingHorizontal: 18,
+                    paddingVertical: 9,
+                    borderRadius: 11,
+                    borderWidth: 1.5,
+                    backgroundColor: isActive ? C.forest : C.cloud,
+                    borderColor: isActive ? C.forest : C.fog,
+                    ...(!isActive ? shadow.sm : {}),
+                  }}
                 >
-                  <Text className="font-quicksand-bold text-[13px] tracking-[0.1px]" style={{ color: isActive ? C.cloud : C.stone }}>
+                  <Text style={{
+                    fontFamily: "Quicksand-Bold",
+                    fontSize: 13,
+                    letterSpacing: 0.1,
+                    color: isActive ? C.cloud : C.stone,
+                  }}>
                     {filter}
                   </Text>
                 </TouchableOpacity>
@@ -648,19 +1152,39 @@ const Home = () => {
             })}
           </ScrollView>
 
-          {/* Jobs list */}
+          {/* ── Jobs list ── */}
           {filteredJobs.length === 0 ? (
-            <View className="bg-white rounded-3xl overflow-hidden border-[1.5px]" style={{ borderColor: C.fog, ...shadow.sm }}>
+            <View style={{
+              backgroundColor: C.cloud,
+              borderRadius: 28,
+              overflow: "hidden",
+              borderWidth: 1.5,
+              borderColor: C.fog,
+              ...shadow.sm,
+            }}>
               <Image
                 source={require("@/assets/images/empty-jobs.jpg")}
                 style={{ width: "100%", height: 240 }}
                 resizeMode="cover"
               />
-              <View className="px-8 py-6 items-center">
-                <Text className="font-quicksand-bold text-[17px] text-center mb-1.5 tracking-[-0.4px]" style={{ color: C.ink }}>
+              <View style={{ paddingHorizontal: 28, paddingVertical: 22, alignItems: "center" }}>
+                <Text style={{
+                  fontFamily: "Quicksand-Bold",
+                  fontSize: 17,
+                  textAlign: "center",
+                  letterSpacing: -0.4,
+                  color: C.ink,
+                  marginBottom: 6,
+                }}>
                   No jobs found
                 </Text>
-                <Text className="font-quicksand text-sm text-center leading-[22px]" style={{ color: C.pebble }}>
+                <Text style={{
+                  fontFamily: "Quicksand-Medium",
+                  fontSize: 14,
+                  textAlign: "center",
+                  lineHeight: 22,
+                  color: C.pebble,
+                }}>
                   Try adjusting your search or filters.
                 </Text>
               </View>
@@ -669,13 +1193,19 @@ const Home = () => {
             filteredJobs.map((job) => <View key={job.id}>{renderJobCard({ item: job })}</View>)
           )}
 
-          {/* Section divider */}
-          <View className="flex-row items-center my-[30px] gap-3.5">
-            <View className="flex-1 h-px" style={{ backgroundColor: C.fog }} />
-            <Text className="font-quicksand-bold text-[10px] tracking-[1.8px] uppercase" style={{ color: C.pebble }}>
+          {/* ── Section divider ── */}
+          <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 32, gap: 14 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: C.fog }} />
+            <Text style={{
+              fontFamily: "Quicksand-Bold",
+              fontSize: 9.5,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              color: C.pebble,
+            }}>
               Your Dashboard
             </Text>
-            <View className="flex-1 h-px" style={{ backgroundColor: C.fog }} />
+            <View style={{ flex: 1, height: 1, backgroundColor: C.fog }} />
           </View>
 
           <StatsCard />
