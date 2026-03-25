@@ -67,93 +67,112 @@ const CARDS = [
 export default function Train() {
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: C.mist }}
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 68, paddingBottom: 48 }}
+      className="flex-1"
+      style={{ backgroundColor: C.mist }}
+      contentContainerStyle={{ paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* ── Header ── */}
-      <View style={{ marginBottom: 36 }}>
-        {/* Eyebrow */}
-        <View style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 7,
-          marginBottom: 12,
-        }}>
-          <View style={{
-            width: 28,
-            height: 28,
-            borderRadius: 8,
-            backgroundColor: C.mint,
-            alignItems: "center",
-            justifyContent: "center",
-            borderWidth: 1,
-            borderColor: `${C.fern}30`,
-          }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.fern }} />
+      {/* ── Filter Tabs (like 4th screen top tabs) ── */}
+      <View className="flex-row items-center gap-2 px-5 pt-14 pb-4">
+        <View
+          className="px-4 py-2 rounded-full flex-row items-center gap-1.5"
+          style={{ backgroundColor: C.cloud, borderWidth: 1, borderColor: C.fog }}
+        >
+          <View className="w-4 h-4 rounded items-center justify-center" style={{ backgroundColor: C.mint }}>
+            <View className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.fern }} />
           </View>
-          <Text style={{
-            fontSize: 12,
-            fontWeight: "700",
-            color: C.forest,
-            letterSpacing: 1.6,
-            textTransform: "uppercase",
-          }}>
-            Quickhands Platform
-          </Text>
+          <Text className="text-xs font-semibold" style={{ color: C.stone }}>Platform</Text>
         </View>
-
-        <Text style={{
-          fontSize: 34,
-          fontWeight: "900",
-          color: C.ink,
-          letterSpacing: -1.6,
-          lineHeight: 40,
-          marginBottom: 10,
-        }}>
-          Get Trained 👋
-        </Text>
-        <Text style={{
-          color: C.stone,
-          fontSize: 15,
-          lineHeight: 23,
-          fontWeight: "400",
-          maxWidth: 290,
-        }}>
-          Learn how to succeed as a specialists and get more jobs faster.
-        </Text>
-      </View>
-
-      {/* ── Progress bar strip ── */}
-      <View style={{
-        backgroundColor: C.cloud,
-        borderRadius: 16,
-        padding: 18,
-        marginBottom: 28,
-        borderWidth: 1.5,
-        borderColor: C.fog,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        ...shadow.sm,
-      }}>
-        <View>
-          <Text style={{ fontSize: 13, fontWeight: "700", color: C.ink, letterSpacing: -0.2 }}>
-            Your Progress
-          </Text>
-          <Text style={{ fontSize: 11, color: C.pebble, fontWeight: "500", marginTop: 2 }}>
-            0 of 4 modules complete
-          </Text>
-        </View>
-        <View style={{ alignItems: "flex-end" }}>
-          <Text style={{ fontSize: 20, fontWeight: "900", color: C.forest, letterSpacing: -0.8 }}>
-            0%
-          </Text>
+        <View
+          className="px-4 py-2 rounded-full flex-row items-center gap-1.5"
+          style={{ backgroundColor: C.forest }}
+        >
+          <Text className="text-xs font-bold" style={{ color: C.cloud }}>Training</Text>
         </View>
       </View>
 
-      {/* ── Training Cards ── */}
-      <View style={{ gap: 12, marginBottom: 36 }}>
+      {/* ── Search Bar (like 4th screen) ── */}
+      <View className="px-5 mb-5">
+        <View
+          className="flex-row items-center px-4 py-3 rounded-xl"
+          style={{ backgroundColor: C.fog }}
+        >
+          <Text className="text-sm" style={{ color: C.pebble }}>🔍</Text>
+          <Text className="text-sm ml-2 flex-1" style={{ color: C.pebble }}>Search Training Modules</Text>
+        </View>
+      </View>
+
+      {/* ── Header Card (styled like a news card header) ── */}
+      <View className="px-5 mb-4">
+        <View
+          className="rounded-2xl p-5"
+          style={{ backgroundColor: C.cloud, borderWidth: 1, borderColor: C.fog, ...shadow.card }}
+        >
+          {/* Header row with avatar-like element */}
+          <View className="flex-row items-center mb-4">
+            <View
+              className="w-12 h-12 rounded-full items-center justify-center mr-3"
+              style={{ backgroundColor: C.mint, borderWidth: 1.5, borderColor: `${C.fern}30` }}
+            >
+              <Text className="text-lg">👋</Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-xs font-bold tracking-wider uppercase" style={{ color: C.forest }}>
+                Quickhands Platform
+              </Text>
+              <Text className="text-xs mt-0.5" style={{ color: C.pebble }}>Training Hub</Text>
+            </View>
+            <View className="px-2.5 py-1 rounded-full" style={{ backgroundColor: `${C.fern}20` }}>
+              <Text className="text-[10px] font-semibold" style={{ color: C.fern }}>New</Text>
+            </View>
+          </View>
+
+          {/* Title */}
+          <Text
+            className="text-2xl font-black mb-2"
+            style={{ color: C.ink, letterSpacing: -0.8 }}
+          >
+            Get Trained
+          </Text>
+
+          {/* Description */}
+          <Text className="text-sm leading-5 mb-4" style={{ color: C.stone }}>
+            Learn how to succeed as a specialists and get more jobs faster.
+          </Text>
+
+          {/* Tags row (like trending/global news tags) */}
+          <View className="flex-row items-center gap-2">
+            <View className="px-2.5 py-1 rounded-full" style={{ backgroundColor: `${C.forest}15` }}>
+              <Text className="text-[10px] font-semibold" style={{ color: C.forest }}>Essential</Text>
+            </View>
+            <View className="px-2.5 py-1 rounded-full" style={{ backgroundColor: C.fog }}>
+              <Text className="text-[10px] font-semibold" style={{ color: C.stone }}>4 Modules</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {/* ── Progress bar strip (styled like engagement metrics bar) ── */}
+      <View className="px-5 mb-5">
+        <View
+          className="flex-row items-center justify-between rounded-xl px-4 py-3"
+          style={{ backgroundColor: C.cloud, borderWidth: 1, borderColor: C.fog, ...shadow.sm }}
+        >
+          <View className="flex-row items-center gap-4">
+            <View className="flex-row items-center gap-1.5">
+              <Text className="text-sm">📊</Text>
+              <Text className="text-xs font-bold" style={{ color: C.ink }}>Your Progress</Text>
+            </View>
+            <Text className="text-[11px]" style={{ color: C.pebble }}>0 of 4 modules complete</Text>
+          </View>
+          <View className="px-3 py-1.5 rounded-lg" style={{ backgroundColor: C.mint }}>
+            <Text className="text-sm font-black" style={{ color: C.forest }}>0%</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ── Training Cards (styled like news feed cards) ── */}
+      <View className="px-5 gap-3 mb-6">
         {CARDS.map((card, index) => (
           <TrainingCard
             key={index}
@@ -168,51 +187,27 @@ export default function Train() {
         ))}
       </View>
 
-      {/* ── CTA ── */}
-      <View>
+      {/* ── CTA (styled like action button) ── */}
+      <View className="px-5">
         <TouchableOpacity
           onPress={() => router.replace("/(root)/home")}
           activeOpacity={0.85}
-          style={{
-            backgroundColor: C.forest,
-            paddingVertical: 18,
-            borderRadius: 18,
-            alignItems: "center",
-            justifyContent: "center",
-            flexDirection: "row",
-            gap: 8,
-            ...shadow.btn,
-          }}
+          className="flex-row items-center justify-center py-4 rounded-xl gap-2"
+          style={{ backgroundColor: C.forest, ...shadow.btn }}
         >
-          <Text style={{
-            color: C.cloud,
-            fontSize: 16,
-            fontWeight: "800",
-            letterSpacing: 0.2,
-          }}>
+          <Text className="text-base font-extrabold" style={{ color: C.cloud }}>
             Start Taking Jobs
           </Text>
-          <View style={{
-            width: 24,
-            height: 24,
-            borderRadius: 8,
-            backgroundColor: `${C.fern}40`,
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            <Text style={{ color: C.cloud, fontSize: 13, fontWeight: "900" }}>→</Text>
+          <View
+            className="w-6 h-6 rounded-lg items-center justify-center"
+            style={{ backgroundColor: `${C.fern}40` }}
+          >
+            <Text className="text-xs font-black" style={{ color: C.cloud }}>→</Text>
           </View>
         </TouchableOpacity>
 
         {/* Footnote */}
-        <Text style={{
-          textAlign: "center",
-          color: C.pebble,
-          fontSize: 12,
-          fontWeight: "500",
-          marginTop: 16,
-          letterSpacing: 0.1,
-        }}>
+        <Text className="text-center text-xs mt-4" style={{ color: C.pebble }}>
           You can always come back to finish training later.
         </Text>
       </View>
@@ -241,65 +236,47 @@ function TrainingCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.93}
-      style={{
-        backgroundColor: C.cloud,
-        borderRadius: 22,
-        padding: 20,
-        borderWidth: 1.5,
-        borderColor: C.fog,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 16,
-        ...shadow.card,
-      }}
+      className="rounded-2xl p-4"
+      style={{ backgroundColor: C.cloud, borderWidth: 1, borderColor: C.fog, ...shadow.card }}
     >
-      {/* Icon block */}
-      <View style={{
-        width: 52,
-        height: 52,
-        borderRadius: 16,
-        backgroundColor: bgColor,
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 1,
-        borderColor: `${accentColor}20`,
-        flexShrink: 0,
-      }}>
-        <Text style={{ fontSize: 24 }}>{emoji}</Text>
+      {/* Top row - Avatar-like icon + Title area (like news card header) */}
+      <View className="flex-row items-start gap-3">
+        {/* Icon block (like avatar) */}
+        <View
+          className="w-11 h-11 rounded-full items-center justify-center"
+          style={{ backgroundColor: bgColor, borderWidth: 1, borderColor: `${accentColor}20` }}
+        >
+          <Text className="text-lg">{emoji}</Text>
+        </View>
+
+        {/* Text content */}
+        <View className="flex-1">
+          <View className="flex-row items-center justify-between mb-1">
+            <Text className="text-sm font-bold" style={{ color: C.ink }}>
+              {title}
+            </Text>
+            <Text className="text-lg" style={{ color: C.pebble }}>›</Text>
+          </View>
+          <Text className="text-xs leading-4" style={{ color: C.stone }}>
+            {description}
+          </Text>
+        </View>
       </View>
 
-      {/* Text */}
-      <View style={{ flex: 1 }}>
-        <Text style={{
-          fontSize: 15,
-          fontWeight: "800",
-          color: C.ink,
-          letterSpacing: -0.4,
-          marginBottom: 4,
-        }}>
-          {title}
-        </Text>
-        <Text style={{
-          fontSize: 13,
-          color: C.stone,
-          lineHeight: 19,
-          fontWeight: "400",
-        }}>
-          {description}
-        </Text>
-      </View>
-
-      {/* Arrow chip */}
-      <View style={{
-        width: 32,
-        height: 32,
-        borderRadius: 10,
-        backgroundColor: C.fog,
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}>
-        <Text style={{ color: C.stone, fontSize: 14, fontWeight: "700" }}>›</Text>
+      {/* Bottom metrics row (like engagement metrics) */}
+      <View className="flex-row items-center mt-3 pt-3 gap-4" style={{ borderTopWidth: 1, borderTopColor: C.fog }}>
+        <View className="flex-row items-center gap-1">
+          <Text className="text-xs" style={{ color: C.pebble }}>📖</Text>
+          <Text className="text-[11px]" style={{ color: C.pebble }}>Module {index + 1}</Text>
+        </View>
+        <View className="flex-row items-center gap-1">
+          <Text className="text-xs" style={{ color: C.pebble }}>⏱</Text>
+          <Text className="text-[11px]" style={{ color: C.pebble }}>5 min</Text>
+        </View>
+        <View className="flex-1" />
+        <View className="px-2 py-1 rounded-md" style={{ backgroundColor: C.fog }}>
+          <Text className="text-[10px] font-semibold" style={{ color: C.stone }}>Start</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
