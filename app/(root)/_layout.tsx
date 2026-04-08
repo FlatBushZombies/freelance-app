@@ -1,45 +1,143 @@
 "use client"
 
-import { Tabs, router } from "expo-router"
-import { View, ActivityIndicator, Platform, Text } from "react-native"
-import { useUser } from "@clerk/clerk-expo"
 import { useEffect, useState } from "react"
+import { Tabs, router } from "expo-router"
+import { ActivityIndicator, Platform, Text, View } from "react-native"
+import { useUser } from "@clerk/clerk-expo"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ArrowUpOnSquareStackIcon } from "react-native-heroicons/outline"
-import { icons } from "@/constants"
-import { Film, User, BookMarked, Home, MessageCircle } from "lucide-react-native"
+import { Home, MessageCircle, User } from "lucide-react-native"
+import { useNotifications } from "@/contexts/NotificationsContext"
+
+const TAB_BAR_HEIGHT = 74
+const TAB_SLOT_HEIGHT = 58
+
+const COLOR = {
+  active: "#708238",
+  activeLight: "rgba(112,130,56,0.18)",
+  activeGlow: "#8ea64c",
+  inactive: "#6B7280",
+  bg: "#000000",
+  border: "#111111",
+  label: "#d1d5db",
+  badge: "#EF4444",
+}
 
 const TabIcon = ({
   Icon,
   focused,
   label,
+  badgeCount = 0,
 }: {
   Icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
   focused: boolean
   label: string
-}) => (
-  <View style={{ alignItems: "center", justifyContent: "center", flex: 1, minWidth: 56 }}>
-    <Icon
-      size={22}
-      color={focused ? "#708238" : "#6B7280"}
-      strokeWidth={focused ? 2.5 : 1.8}
+  badgeCount?: number
+}) => {
+  const badgeLabel = badgeCount > 99 ? "99+" : badgeCount.toString()
+
+  return (
+    <View
+      style={{
+        width: 68,
+        height: TAB_SLOT_HEIGHT,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingTop: 4,
+      }}
+    >
+    <View
+      style={{
+        position: "absolute",
+        top: 4,
+        width: focused ? 18 : 0,
+        height: 3,
+        borderRadius: 999,
+        backgroundColor: focused ? COLOR.active : "transparent",
+        opacity: focused ? 1 : 0,
+      }}
     />
+
+    <View
+      style={{
+        width: 44,
+        height: 34,
+        borderRadius: 14,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: focused ? COLOR.activeLight : "transparent",
+        ...(focused
+          ? Platform.select({
+              ios: {
+                shadowColor: COLOR.activeGlow,
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.28,
+                shadowRadius: 12,
+              },
+              android: {
+                elevation: 4,
+              },
+            })
+          : {}),
+      }}
+    >
+      <Icon
+        size={21}
+        color={focused ? COLOR.active : COLOR.inactive}
+        strokeWidth={focused ? 2.35 : 1.85}
+      />
+      {badgeCount > 0 ? (
+        <View
+          style={{
+            position: "absolute",
+            top: 2,
+            right: 0,
+            minWidth: 18,
+            height: 18,
+            paddingHorizontal: 4,
+            borderRadius: 9,
+            backgroundColor: COLOR.badge,
+            borderWidth: 1,
+            borderColor: COLOR.bg,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text
+            style={{
+              color: "#ffffff",
+              fontSize: 9,
+              lineHeight: 11,
+              fontWeight: "700",
+            }}
+          >
+            {badgeLabel}
+          </Text>
+        </View>
+      ) : null}
+    </View>
+
     <Text
       style={{
-        fontSize: 10,
-        fontWeight: focused ? "600" : "400",
-        color: focused ? "#708238" : "#6B7280",
         marginTop: 4,
-        letterSpacing: 0.2,
+        fontSize: 10,
+        lineHeight: 13,
+        fontWeight: focused ? "700" : "500",
+        color: focused ? COLOR.label : COLOR.inactive,
+        letterSpacing: 0.22,
       }}
     >
       {label}
     </Text>
-  </View>
-)
+    </View>
+  )
+}
 
 export default function Layout() {
   const { isLoaded, isSignedIn } = useUser()
+  const { unreadCount } = useNotifications()
   const [isNavigationReady, setIsNavigationReady] = useState(false)
+  const insets = useSafeAreaInsets()
 
   useEffect(() => {
     const timer = setTimeout(() => setIsNavigationReady(true), 100)
@@ -48,16 +146,42 @@ export default function Layout() {
 
   useEffect(() => {
     if (!isLoaded || !isNavigationReady) return
-    if (!isSignedIn) { router.replace("/"); return }
-  }, [isLoaded, isSignedIn, isNavigationReady])
+    if (!isSignedIn) {
+      router.replace("/")
+    }
+  }, [isLoaded, isNavigationReady, isSignedIn])
 
   if (!isLoaded) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
-        <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: "#111", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-          <ActivityIndicator size="small" color="#708238" />
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: COLOR.bg,
+        }}
+      >
+        <View
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 16,
+            backgroundColor: "#111",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+          }}
+        >
+          <ActivityIndicator size="small" color={COLOR.active} />
         </View>
-        <Text style={{ color: "#6B7280", fontSize: 13, fontWeight: "500", letterSpacing: 0.3 }}>
+        <Text
+          style={{
+            color: COLOR.inactive,
+            fontSize: 13,
+            fontWeight: "500",
+            letterSpacing: 0.3,
+          }}
+        >
           Loading...
         </Text>
       </View>
@@ -71,26 +195,30 @@ export default function Layout() {
         headerShown: false,
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: "#000",
-          borderTopColor: "#111",
-          paddingBottom: Platform.OS === "ios" ? 24 : 10,
+          backgroundColor: COLOR.bg,
+          borderTopColor: COLOR.border,
+          borderTopWidth: 1,
+          height: TAB_BAR_HEIGHT + insets.bottom,
           paddingTop: 6,
-          height: Platform.OS === "ios" ? 82 : 68,
+          paddingBottom: Math.max(insets.bottom, 10),
           shadowColor: "#000",
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.4,
+          shadowOpacity: 0.28,
           shadowRadius: 16,
-          elevation: 12,
+          elevation: 10,
         },
-        tabBarActiveTintColor: "#708238",
-        tabBarInactiveTintColor: "#6B7280",
+        tabBarItemStyle: {
+          height: TAB_BAR_HEIGHT,
+          justifyContent: "center",
+          alignItems: "center",
+        },
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon Icon={Home} focused={focused} label="Home" />
+            <TabIcon Icon={Home} focused={focused} label="Home" badgeCount={unreadCount} />
           ),
         }}
       />

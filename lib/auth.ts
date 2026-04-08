@@ -1,7 +1,7 @@
 // auth.ts
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
-import { fetchAPI } from "@/lib/fetch";
+import { fetchAPI, getApiUrl } from "@/lib/fetch";
 
 export const tokenCache = {
   async getToken(key: string) {
@@ -39,7 +39,7 @@ export const googleOAuth = async (startOAuthFlow: any) => {
       // Session is already active here; backend sync failures should not fail login UX.
       try {
         const response = await fetch(
-          `https://quickhands-api.vercel.app/api/user/get?clerkId=${user?.id}`,
+          getApiUrl(`/api/user/get?clerkId=${user?.id}`),
           { method: "GET" }
         );
         const data = await response.json();

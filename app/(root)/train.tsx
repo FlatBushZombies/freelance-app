@@ -1,7 +1,22 @@
-import { View, Text, ScrollView, TouchableOpacity, Platform } from "react-native";
-import { router } from "expo-router";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native"
+import { router } from "expo-router"
+import {
+  MapIcon,
+  RocketLaunchIcon,
+  ShieldCheckIcon,
+  BanknotesIcon,
+  MagnifyingGlassIcon,
+  AcademicCapIcon,
+  ChartBarIcon,
+  BookOpenIcon,
+  ClockIcon,
+  ChevronRightIcon,
+  ArrowRightIcon,
+  SparklesIcon,
+  Squares2X2Icon,
+} from "react-native-heroicons/outline"
+import { CheckBadgeIcon } from "react-native-heroicons/solid"
 
-// ─── Design Tokens ────────────────────────────────────────────
 const C = {
   forest:   "#2D4A6A",
   fern:     "#52839B",
@@ -17,120 +32,114 @@ const C = {
   fog:      "#EBEff2",
 }
 
-const shadow = {
-  card: Platform.select({
-    ios: { shadowColor: "#2D4A6A", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 24 },
-    android: { elevation: 3 },
-  }),
-  btn: Platform.select({
-    ios: { shadowColor: "#2D4A6A", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.32, shadowRadius: 18 },
-    android: { elevation: 8 },
-  }),
-  sm: Platform.select({
-    ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
-    android: { elevation: 1 },
-  }),
-}
-// ──────────────────────────────────────────────────────────────
-
 const CARDS = [
   {
-    title: "How the Platform Works",
+    title:       "How the Platform Works",
     description: "Understand bookings, payments, and ratings.",
-    emoji: "🗺️",
-    accent: C.forest,
-    bg: C.mint,
+    Icon:        MapIcon,
+    accent:      C.forest,
+    bg:          C.mint,
   },
   {
-    title: "Getting More Jobs",
+    title:       "Getting More Jobs",
     description: "Tips to improve your profile and get selected.",
-    emoji: "🚀",
-    accent: C.fern,
-    bg: `${C.fern}18`,
+    Icon:        RocketLaunchIcon,
+    accent:      C.fern,
+    bg:          `${C.fern}18`,
   },
   {
-    title: "Safety & Trust",
+    title:       "Safety & Trust",
     description: "Learn best practices for safe and professional work.",
-    emoji: "🛡️",
-    accent: C.charcoal,
-    bg: `${C.leaf}20`,
+    Icon:        ShieldCheckIcon,
+    accent:      C.charcoal,
+    bg:          `${C.leaf}20`,
   },
   {
-    title: "Payments & Payouts",
+    title:       "Payments & Payouts",
     description: "How you get paid and avoid payment issues.",
-    emoji: "💸",
-    accent: C.charcoal,
-    bg: C.fog,
+    Icon:        BanknotesIcon,
+    accent:      C.charcoal,
+    bg:          C.fog,
   },
 ]
 
 export default function Train() {
   return (
     <ScrollView
-      className="flex-1"
-      style={{ backgroundColor: C.mist }}
+      className="flex-1 bg-white"
       contentContainerStyle={{ paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* ── Filter Tabs (like 4th screen top tabs) ── */}
+      {/* ── Filter Tabs ── */}
       <View className="flex-row items-center gap-2 px-5 pt-14 pb-4">
         <View
           className="px-4 py-2 rounded-full flex-row items-center gap-1.5"
-          style={{ backgroundColor: C.cloud, borderWidth: 1, borderColor: C.fog }}
+          style={{ borderWidth: 0.5, borderColor: C.fog, backgroundColor: C.cloud }}
         >
-          <View className="w-4 h-4 rounded items-center justify-center" style={{ backgroundColor: C.mint }}>
-            <View className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: C.fern }} />
-          </View>
-          <Text className="text-xs font-semibold" style={{ color: C.stone }}>Platform</Text>
+          <Squares2X2Icon size={13} color={C.fern} />
+          <Text className="text-xs font-medium" style={{ color: C.stone }}>Platform</Text>
         </View>
+
         <View
           className="px-4 py-2 rounded-full flex-row items-center gap-1.5"
           style={{ backgroundColor: C.forest }}
         >
-          <Text className="text-xs font-bold" style={{ color: C.cloud }}>Training</Text>
+          <AcademicCapIcon size={13} color={C.cloud} />
+          <Text className="text-xs font-medium" style={{ color: C.cloud }}>Training</Text>
         </View>
       </View>
 
-      {/* ── Search Bar (like 4th screen) ── */}
+      {/* ── Search Bar ── */}
       <View className="px-5 mb-5">
         <View
-          className="flex-row items-center px-4 py-3 rounded-xl"
+          className="flex-row items-center px-4 py-3 rounded-xl gap-2"
           style={{ backgroundColor: C.fog }}
         >
-          <Text className="text-sm" style={{ color: C.pebble }}>🔍</Text>
-          <Text className="text-sm ml-2 flex-1" style={{ color: C.pebble }}>Search Training Modules</Text>
+          <MagnifyingGlassIcon size={16} color={C.pebble} />
+          <Text className="text-sm flex-1" style={{ color: C.pebble }}>
+            Search Training Modules
+          </Text>
         </View>
       </View>
 
-      {/* ── Header Card (styled like a news card header) ── */}
+      {/* ── Header Card ── */}
       <View className="px-5 mb-4">
         <View
-          className="rounded-2xl p-5"
-          style={{ backgroundColor: C.cloud, borderWidth: 1, borderColor: C.fog, ...shadow.card }}
+          className="rounded-2xl p-5 bg-white"
+          style={{ borderWidth: 0.5, borderColor: C.fog }}
         >
-          {/* Header row with avatar-like element */}
+          {/* Header row */}
           <View className="flex-row items-center mb-4">
             <View
-              className="w-12 h-12 rounded-full items-center justify-center mr-3"
-              style={{ backgroundColor: C.mint, borderWidth: 1.5, borderColor: `${C.fern}30` }}
+              className="w-11 h-11 rounded-full items-center justify-center mr-3"
+              style={{ backgroundColor: C.mint, borderWidth: 0.5, borderColor: `${C.fern}30` }}
             >
-              <Text className="text-lg">👋</Text>
+              <AcademicCapIcon size={20} color={C.forest} />
             </View>
             <View className="flex-1">
-              <Text className="text-xs font-bold tracking-wider uppercase" style={{ color: C.forest }}>
+              <Text
+                className="text-[11px] font-medium uppercase tracking-wider"
+                style={{ color: C.forest }}
+              >
                 Quickhands Platform
               </Text>
-              <Text className="text-xs mt-0.5" style={{ color: C.pebble }}>Training Hub</Text>
+              <Text className="text-[11px] mt-0.5" style={{ color: C.pebble }}>
+                Training Hub
+              </Text>
             </View>
-            <View className="px-2.5 py-1 rounded-full" style={{ backgroundColor: `${C.fern}20` }}>
-              <Text className="text-[10px] font-semibold" style={{ color: C.fern }}>New</Text>
+            <View
+              className="px-2.5 py-1 rounded-full flex-row items-center gap-1"
+              style={{ backgroundColor: `${C.fern}18` }}
+            >
+              <SparklesIcon size={10} color={C.fern} />
+              <Text className="text-[10px] font-medium" style={{ color: C.fern }}>New</Text>
             </View>
           </View>
 
           {/* Title */}
           <Text
-            className="text-2xl font-black mb-2"
-            style={{ color: C.ink, letterSpacing: -0.8 }}
+            className="text-2xl font-bold mb-1.5"
+            style={{ color: C.ink, letterSpacing: -0.5 }}
           >
             Get Trained
           </Text>
@@ -140,38 +149,48 @@ export default function Train() {
             Learn how to succeed as a specialists and get more jobs faster.
           </Text>
 
-          {/* Tags row (like trending/global news tags) */}
+          {/* Tags row */}
           <View className="flex-row items-center gap-2">
-            <View className="px-2.5 py-1 rounded-full" style={{ backgroundColor: `${C.forest}15` }}>
-              <Text className="text-[10px] font-semibold" style={{ color: C.forest }}>Essential</Text>
+            <View
+              className="px-2.5 py-1 rounded-full flex-row items-center gap-1"
+              style={{ backgroundColor: `${C.forest}12` }}
+            >
+              <CheckBadgeIcon size={11} color={C.forest} />
+              <Text className="text-[10px] font-medium" style={{ color: C.forest }}>Essential</Text>
             </View>
-            <View className="px-2.5 py-1 rounded-full" style={{ backgroundColor: C.fog }}>
-              <Text className="text-[10px] font-semibold" style={{ color: C.stone }}>4 Modules</Text>
+            <View
+              className="px-2.5 py-1 rounded-full flex-row items-center gap-1"
+              style={{ backgroundColor: C.fog }}
+            >
+              <Squares2X2Icon size={11} color={C.stone} />
+              <Text className="text-[10px] font-medium" style={{ color: C.stone }}>4 Modules</Text>
             </View>
           </View>
         </View>
       </View>
 
-      {/* ── Progress bar strip (styled like engagement metrics bar) ── */}
+      {/* ── Progress strip ── */}
       <View className="px-5 mb-5">
         <View
-          className="flex-row items-center justify-between rounded-xl px-4 py-3"
-          style={{ backgroundColor: C.cloud, borderWidth: 1, borderColor: C.fog, ...shadow.sm }}
+          className="flex-row items-center justify-between rounded-xl px-4 py-3 bg-white"
+          style={{ borderWidth: 0.5, borderColor: C.fog }}
         >
           <View className="flex-row items-center gap-4">
             <View className="flex-row items-center gap-1.5">
-              <Text className="text-sm">📊</Text>
-              <Text className="text-xs font-bold" style={{ color: C.ink }}>Your Progress</Text>
+              <ChartBarIcon size={15} color={C.forest} />
+              <Text className="text-xs font-medium" style={{ color: C.ink }}>Your Progress</Text>
             </View>
-            <Text className="text-[11px]" style={{ color: C.pebble }}>0 of 4 modules complete</Text>
+            <Text className="text-[11px]" style={{ color: C.pebble }}>
+              0 of 4 modules complete
+            </Text>
           </View>
-          <View className="px-3 py-1.5 rounded-lg" style={{ backgroundColor: C.mint }}>
-            <Text className="text-sm font-black" style={{ color: C.forest }}>0%</Text>
+          <View className="px-3 py-1 rounded-lg" style={{ backgroundColor: C.mint }}>
+            <Text className="text-xs font-semibold" style={{ color: C.forest }}>0%</Text>
           </View>
         </View>
       </View>
 
-      {/* ── Training Cards (styled like news feed cards) ── */}
+      {/* ── Training Cards ── */}
       <View className="px-5 gap-3 mb-6">
         {CARDS.map((card, index) => (
           <TrainingCard
@@ -179,7 +198,7 @@ export default function Train() {
             index={index}
             title={card.title}
             description={card.description}
-            emoji={card.emoji}
+            Icon={card.Icon}
             accentColor={card.accent}
             bgColor={card.bg}
             onPress={() => router.push("/")}
@@ -187,97 +206,105 @@ export default function Train() {
         ))}
       </View>
 
-      {/* ── CTA (styled like action button) ── */}
+      {/* ── CTA ── */}
       <View className="px-5">
         <TouchableOpacity
           onPress={() => router.replace("/(root)/home")}
           activeOpacity={0.85}
           className="flex-row items-center justify-center py-4 rounded-xl gap-2"
-          style={{ backgroundColor: C.forest, ...shadow.btn }}
+          style={{ backgroundColor: C.forest }}
         >
-          <Text className="text-base font-extrabold" style={{ color: C.cloud }}>
+          <Text className="text-sm font-semibold" style={{ color: C.cloud }}>
             Start Taking Jobs
           </Text>
           <View
             className="w-6 h-6 rounded-lg items-center justify-center"
             style={{ backgroundColor: `${C.fern}40` }}
           >
-            <Text className="text-xs font-black" style={{ color: C.cloud }}>→</Text>
+            <ArrowRightIcon size={13} color={C.cloud} />
           </View>
         </TouchableOpacity>
 
-        {/* Footnote */}
         <Text className="text-center text-xs mt-4" style={{ color: C.pebble }}>
           You can always come back to finish training later.
         </Text>
       </View>
     </ScrollView>
-  );
+  )
 }
 
 function TrainingCard({
   title,
   description,
-  emoji,
+  Icon,
   accentColor,
   bgColor,
   onPress,
   index,
 }: {
-  title: string;
-  description: string;
-  emoji: string;
-  accentColor: string;
-  bgColor: string;
-  onPress: () => void;
-  index: number;
+  title: string
+  description: string
+  Icon: React.ComponentType<{ size: number; color: string }>
+  accentColor: string
+  bgColor: string
+  onPress: () => void
+  index: number
 }) {
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.93}
-      className="rounded-2xl p-4"
-      style={{ backgroundColor: C.cloud, borderWidth: 1, borderColor: C.fog, ...shadow.card }}
+      className="rounded-2xl p-4 bg-white"
+      style={{ borderWidth: 0.5, borderColor: C.fog }}
     >
-      {/* Top row - Avatar-like icon + Title area (like news card header) */}
+      {/* Top row — icon tile + title */}
       <View className="flex-row items-start gap-3">
-        {/* Icon block (like avatar) */}
         <View
-          className="w-11 h-11 rounded-full items-center justify-center"
-          style={{ backgroundColor: bgColor, borderWidth: 1, borderColor: `${accentColor}20` }}
+          className="w-10 h-10 rounded-xl items-center justify-center"
+          style={{ backgroundColor: bgColor, borderWidth: 0.5, borderColor: `${accentColor}20` }}
         >
-          <Text className="text-lg">{emoji}</Text>
+          <Icon size={18} color={accentColor} />
         </View>
 
-        {/* Text content */}
         <View className="flex-1">
           <View className="flex-row items-center justify-between mb-1">
-            <Text className="text-sm font-bold" style={{ color: C.ink }}>
+            <Text className="text-sm font-medium flex-1 mr-2" style={{ color: C.ink }}>
               {title}
             </Text>
-            <Text className="text-lg" style={{ color: C.pebble }}>›</Text>
+            <ChevronRightIcon size={16} color={C.pebble} />
           </View>
-          <Text className="text-xs leading-4" style={{ color: C.stone }}>
+          <Text className="text-xs leading-[18px]" style={{ color: C.stone }}>
             {description}
           </Text>
         </View>
       </View>
 
-      {/* Bottom metrics row (like engagement metrics) */}
-      <View className="flex-row items-center mt-3 pt-3 gap-4" style={{ borderTopWidth: 1, borderTopColor: C.fog }}>
+      {/* Footer metrics row */}
+      <View
+        className="flex-row items-center mt-3 pt-3 gap-4"
+        style={{ borderTopWidth: 0.5, borderTopColor: C.fog }}
+      >
         <View className="flex-row items-center gap-1">
-          <Text className="text-xs" style={{ color: C.pebble }}>📖</Text>
+          <BookOpenIcon size={12} color={C.pebble} />
           <Text className="text-[11px]" style={{ color: C.pebble }}>Module {index + 1}</Text>
         </View>
         <View className="flex-row items-center gap-1">
-          <Text className="text-xs" style={{ color: C.pebble }}>⏱</Text>
+          <ClockIcon size={12} color={C.pebble} />
           <Text className="text-[11px]" style={{ color: C.pebble }}>5 min</Text>
         </View>
         <View className="flex-1" />
-        <View className="px-2 py-1 rounded-md" style={{ backgroundColor: C.fog }}>
-          <Text className="text-[10px] font-semibold" style={{ color: C.stone }}>Start</Text>
+        <View
+          className="px-2.5 py-1 rounded-md flex-row items-center gap-1"
+          style={{
+            backgroundColor: `${accentColor}12`,
+            borderWidth: 0.5,
+            borderColor: `${accentColor}25`,
+          }}
+        >
+          <Text className="text-[10px] font-medium" style={{ color: accentColor }}>Start</Text>
+          <ArrowRightIcon size={9} color={accentColor} />
         </View>
       </View>
     </TouchableOpacity>
-  );
+  )
 }

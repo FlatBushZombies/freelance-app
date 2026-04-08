@@ -1,104 +1,34 @@
 "use client"
-import { useEffect, useState, useCallback } from "react"
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  Modal, 
-  FlatList, 
-  ActivityIndicator, 
-  Pressable, 
-  RefreshControl 
+
+import { useState } from "react"
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  FlatList,
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
 } from "react-native"
 import { BellIcon } from "react-native-heroicons/outline"
-import { useAuth } from "@clerk/clerk-expo"
-
-interface Notification {
-  id: number
-  userId: number
-  jobId: number
-  message: string
-  read: boolean
-  createdAt: string
-}
+import { useNotifications } from "@/contexts/NotificationsContext"
 
 interface NotificationBellProps {
   userId: string
 }
 
-export const NotificationBell = ({ userId }: NotificationBellProps) => {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
+export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => {
+  const {
+    notifications,
+    unreadCount,
+    connected,
+    loading,
+    refreshNotifications,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications()
   const [modalVisible, setModalVisible] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const { getToken } = useAuth()
-
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      setLoading(true)
-      const token = await getToken()
-      const response = await fetch(
-        `https://quickhands-api.vercel.app/api/notifications/by-clerk/${userId}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
-      )
-      const data = await response.json()
-
-      if (data.success && Array.isArray(data.notifications)) {
-        setNotifications(data.notifications)
-        const unread = data.notifications.filter((n: Notification) => !n.read).length
-        setUnreadCount(unread)
-      } else {
-        console.log("[v0] Unexpected response:", data)
-      }
-    } catch (error) {
-      console.error("[v0] Error fetching notifications:", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [userId, getToken])
-
-  
-  // Poll for notifications every 10 seconds
-  useEffect(() => {
-    if (!userId) return
-
-    // Initial fetch
-    fetchNotifications()
-
-    // Set up polling interval
-    const interval = setInterval(() => {
-      fetchNotifications()
-    }, 10000) // Poll every 10 seconds
-
-    return () => clearInterval(interval)
-  }, [userId, fetchNotifications])
-
-
-  // ✅ Mark notification as read
-  const markAsRead = async (notificationId: number) => {
-    try {
-      const token = await getToken()
-      const response = await fetch(`https://quickhands-api.vercel.app/api/notifications/${notificationId}/read`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      })
-
-      if (response.ok) {
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
-        )
-        setUnreadCount((prev) => Math.max(0, prev - 1))
-      }
-    } catch (error) {
-      console.error("[v0] Error marking notification as read:", error)
-    }
-  }
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString)
@@ -114,19 +44,63 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
     return "Just now"
   }
 
-  const getNotificationIcon = (message: string) => {
-    if (message.includes("accepted")) return { icon: "✅", color: "#10B981", bg: "#D1FAE5" }
-    if (message.includes("rejected")) return { icon: "❌", color: "#EF4444", bg: "#FEE2E2" }
-    if (message.includes("New job")) return { icon: "💼", color: "#3B82F6", bg: "#DBEAFE" }
-    return { icon: "🔔", color: "#6366F1", bg: "#E0E7FF" }
+  const getNotificationCopy = (message: string) => {
+    const normalized = message.toLowerCase()
+
+    if (normalized.includes("accepted") && (normalized.includes("phone number") || normalized.includes("contact"))) {
+      return {
+        title: "Offer accepted",
+        body: "The client accepted your offer and shared contact details so you can continue directly.",
+        chip: "Accepted",
+        color: "#10B981",
+        bg: "#D1FAE5",
+      }
+    }
+
+    if (normalized.includes("accepted")) {
+      return {
+        title: "Offer accepted",
+        body: "The client accepted your offer. You can expect contact sharing next if they want to connect directly.",
+        chip: "Accepted",
+        color: "#10B981",
+        bg: "#D1FAE5",
+      }
+    }
+
+    if (normalized.includes("rejected")) {
+      return {
+        title: "Offer rejected",
+        body: "The client declined your offer for this job, so this application will not move forward.",
+        chip: "Rejected",
+        color: "#EF4444",
+        bg: "#FEE2E2",
+      }
+    }
+
+    if (normalized.includes("phone number") || normalized.includes("contact")) {
+      return {
+        title: "Contact shared",
+        body: "The client shared contact details for this job, so you can now reach out directly.",
+        chip: "Contact",
+        color: "#0EA5E9",
+        bg: "#E0F2FE",
+      }
+    }
+    return {
+      title: "Update",
+      body: message,
+      chip: "Update",
+      color: "#6366F1",
+      bg: "#E0E7FF",
+    }
   }
 
-  const renderNotification = ({ item }: { item: Notification }) => {
-    const iconData = getNotificationIcon(item.message)
-    
+  const renderNotification = ({ item }: { item: any }) => {
+    const copy = getNotificationCopy(item.message)
+
     return (
       <TouchableOpacity
-        onPress={() => markAsRead(item.id)}
+        onPress={() => void markAsRead(item.id)}
         activeOpacity={0.7}
         style={{
           backgroundColor: item.read ? "#FFFFFF" : "#F8FAFC",
@@ -144,43 +118,41 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-          {/* Icon */}
           <View
             style={{
-              width: 48,
+              minWidth: 48,
               height: 48,
               borderRadius: 24,
-              backgroundColor: iconData.bg,
+              backgroundColor: copy.bg,
               alignItems: "center",
               justifyContent: "center",
               marginRight: 12,
+              paddingHorizontal: 10,
             }}
           >
-            <Text style={{ fontSize: 24 }}>{iconData.icon}</Text>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: copy.color }}>{copy.chip}</Text>
           </View>
 
-          {/* Content */}
           <View style={{ flex: 1 }}>
             <Text
               style={{
                 fontSize: 15,
-                fontWeight: item.read ? "400" : "600",
+                fontWeight: "700",
                 color: "#111827",
-                lineHeight: 21,
-                marginBottom: 6,
+                lineHeight: 20,
+                marginBottom: 4,
               }}
             >
-              {item.message}
+              {copy.title}
             </Text>
 
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text style={{ fontSize: 13, color: "#6B7280" }}>
-                {formatTimeAgo(item.createdAt)}
-              </Text>
-            </View>
+            <Text style={{ fontSize: 14, color: "#4B5563", lineHeight: 20, marginBottom: 8 }}>
+              {copy.body}
+            </Text>
+
+            <Text style={{ fontSize: 13, color: "#6B7280" }}>{formatTimeAgo(item.createdAt)}</Text>
           </View>
 
-          {/* Unread indicator */}
           {!item.read && (
             <View
               style={{
@@ -200,15 +172,12 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
 
   return (
     <>
-      {/* 🔔 Bell Icon */}
       <TouchableOpacity
         onPress={() => setModalVisible(true)}
         className="w-12 h-12 rounded-full bg-gray-100 items-center justify-center relative"
         activeOpacity={0.7}
       >
-        <Text className="text-xl">
-          <BellIcon size={24} color="#111827" />
-        </Text>
+        <BellIcon size={24} color="#111827" />
         {unreadCount > 0 && (
           <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 items-center justify-center px-1">
             <Text className="text-white text-xs font-bold">{unreadCount > 99 ? "99+" : unreadCount}</Text>
@@ -216,7 +185,6 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
         )}
       </TouchableOpacity>
 
-      {/* 🪟 Notifications Modal */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -225,44 +193,53 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
       >
         <Pressable className="flex-1 bg-black/50" onPress={() => setModalVisible(false)}>
           <Pressable className="flex-1 mt-20 bg-white rounded-t-3xl" onPress={(e) => e.stopPropagation()}>
-            {/* Header */}
             <View className="px-6 py-5 border-b border-gray-100 flex-row items-center justify-between">
               <View>
                 <Text className="text-2xl font-bold text-gray-900">Notifications</Text>
-                {unreadCount > 0 && <Text className="text-sm text-gray-500 mt-1">{unreadCount} unread</Text>}
+                <Text className="text-sm text-gray-500 mt-1">
+                  {unreadCount > 0 ? `${unreadCount} unread` : connected ? "Live updates on" : "Pull to refresh"}
+                </Text>
               </View>
-              <TouchableOpacity
-                onPress={() => setModalVisible(false)}
-                className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
-              >
-                <Text className="text-gray-600 text-lg">✕</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                <TouchableOpacity onPress={() => void markAllAsRead()} disabled={unreadCount === 0}>
+                  <Text style={{ color: unreadCount === 0 ? "#9CA3AF" : "#16A34A", fontWeight: "600" }}>
+                    Read all
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
+                >
+                  <Text className="text-gray-600 text-lg">Close</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
-            {/* List */}
-            {loading ? (
+            {loading && notifications.length === 0 ? (
               <View className="flex-1 items-center justify-center">
                 <ActivityIndicator size="large" color="#3B82F6" />
                 <Text style={{ color: "#6B7280", marginTop: 12 }}>Loading notifications...</Text>
               </View>
             ) : notifications.length === 0 ? (
               <View className="flex-1 items-center justify-center px-6">
-                <View style={{
-                  backgroundColor: "#F3F4F6",
-                  width: 120,
-                  height: 120,
-                  borderRadius: 60,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 24,
-                }}>
-                  <Text style={{ fontSize: 56 }}>🔔</Text>
+                <View
+                  style={{
+                    backgroundColor: "#F3F4F6",
+                    width: 120,
+                    height: 120,
+                    borderRadius: 60,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 24,
+                  }}
+                >
+                  <Text style={{ fontSize: 18, fontWeight: "700", color: "#6B7280" }}>Bell</Text>
                 </View>
                 <Text style={{ fontSize: 20, fontWeight: "700", color: "#111827", marginBottom: 8, textAlign: "center" }}>
                   No notifications yet
                 </Text>
                 <Text style={{ fontSize: 15, color: "#6B7280", textAlign: "center", lineHeight: 22 }}>
-                  You&apos;ll be notified when clients{"\n"}respond to your applications
+                  You&apos;ll be notified when clients accept or reject your offers and when they share contact details.
                 </Text>
               </View>
             ) : (
@@ -273,7 +250,7 @@ export const NotificationBell = ({ userId }: NotificationBellProps) => {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingTop: 16, paddingBottom: 24 }}
                 refreshControl={
-                  <RefreshControl refreshing={loading} onRefresh={fetchNotifications} colors={["#3B82F6"]} />
+                  <RefreshControl refreshing={loading} onRefresh={refreshNotifications} colors={["#3B82F6"]} />
                 }
               />
             )}

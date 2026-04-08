@@ -23,6 +23,7 @@ import {
   CheckIcon,
   LightBulbIcon,
 } from "react-native-heroicons/solid";
+import { getApiUrl } from "@/lib/fetch";
 
 const Onboarding = () => {
   const { user, isLoaded } = useUser();
@@ -52,7 +53,7 @@ const Onboarding = () => {
     const checkOnboarding = async () => {
       try {
         const res = await fetch(
-          `https://quickhands-api.vercel.app/api/user/get?clerkId=${user.id}`
+          getApiUrl(`/api/user/get?clerkId=${user.id}`)
         );
         const data = await res.json();
 
@@ -73,7 +74,7 @@ const Onboarding = () => {
     };
 
     checkOnboarding();
-  }, [user, isLoaded, isNavigationReady]);
+  }, [router, user, isLoaded, isNavigationReady]);
 
   const isFormValid = () =>
     fullName.trim().length > 0 &&
@@ -97,7 +98,7 @@ const Onboarding = () => {
 
     try {
       const response = await fetch(
-        "https://quickhands-api.vercel.app/api/user/update",
+        getApiUrl("/api/user/update"),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

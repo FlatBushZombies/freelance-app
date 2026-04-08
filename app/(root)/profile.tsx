@@ -1,12 +1,24 @@
 "use client"
-import { View, Text, ScrollView, TouchableOpacity, Image, StatusBar, SafeAreaView, Modal, ActivityIndicator } from "react-native"
-import { useUser } from "@clerk/clerk-expo"
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  StatusBar,
+  SafeAreaView,
+  Modal,
+  ActivityIndicator,
+} from "react-native"
+import { useUser, useAuth } from "@clerk/clerk-expo"
 import { Ionicons } from "@expo/vector-icons"
 import { useState, useEffect } from "react"
 import WalletComponent from "@/components/WalletComponent"
+import { getApiUrl } from "@/lib/fetch"
 
 const ProfileScreen = () => {
   const { user } = useUser()
+  const { getToken } = useAuth()
   const [showVerificationModal, setShowVerificationModal] = useState(false)
   const [activeTab, setActiveTab] = useState("projects")
   const [userProjects, setUserProjects] = useState<any[]>([])
@@ -17,359 +29,472 @@ const ProfileScreen = () => {
       if (!user?.id) return
 
       try {
-        const token = await (user as any).getIdToken?.()
+        const token = await getToken()
         if (!token) {
           setLoading(false)
           return
         }
 
-        const response = await fetch(
-          'https://quickhands-api.vercel.app/api/applications/my',
-          {
-            headers: { 'Authorization': `Bearer ${token}` },
-          }
-        )
+        const response = await fetch(getApiUrl("/api/applications/my"), {
+          headers: { Authorization: `Bearer ${token}` },
+        })
         const data = await response.json()
 
         if (data.success && Array.isArray(data.data)) {
-          // Transform applications into project format
           const projects = data.data.map((app: any) => ({
             id: app.id,
             title: app.jobServiceType || "Untitled Job",
             client: app.jobOwnerName || "Client",
-            status: app.status === 'accepted' ? 'in_progress' : app.status === 'rejected' ? 'rejected' : 'pending',
+            status:
+              app.status === "accepted"
+                ? "in_progress"
+                : app.status === "rejected"
+                ? "rejected"
+                : "pending",
             startDate: app.createdAt,
-            quotation: app.quotation || 'Not specified',
-            conditions: app.conditions || '',
-            category: app.jobServiceType || 'General',
-            budget: app.quotation || 'N/A',
+            quotation: app.quotation || "Not specified",
+            conditions: app.conditions || "",
+            category: app.jobServiceType || "General",
+            budget: app.quotation || "N/A",
           }))
           setUserProjects(projects)
         }
       } catch (error) {
-        console.error('Error fetching applications:', error)
+        console.error("Error fetching applications:", error)
       } finally {
         setLoading(false)
       }
     }
 
     fetchApplications()
-  }, [user?.id])
+  }, [getToken, user?.id])
 
-  const acceptedProjects = userProjects.filter((project) => project.status === "in_progress")
-  const pendingProjects = userProjects.filter((project) => project.status === "pending")
-  const rejectedProjects = userProjects.filter((project) => project.status === "rejected")
-  const completedProjects = userProjects.filter((project) => project.status === "completed")
+  const acceptedProjects = userProjects.filter((p) => p.status === "in_progress")
+  const pendingProjects  = userProjects.filter((p) => p.status === "pending")
+  const rejectedProjects = userProjects.filter((p) => p.status === "rejected")
+  const completedProjects = userProjects.filter((p) => p.status === "completed")
 
-  const averageRating = 0 // Ratings not implemented yet
-
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, index) => (
+  const renderStars = (rating: number) =>
+    Array.from({ length: 5 }, (_, i) => (
       <Ionicons
-        key={index}
-        name={index < rating ? "star" : "star-outline"}
-        size={16}
-        color={index < rating ? "#F59E0B" : "#D1D5DB"}
+        key={i}
+        name={i < rating ? "star" : "star-outline"}
+        size={14}
+        color={i < rating ? "#F59E0B" : "#D1D5DB"}
       />
     ))
+
+  // Dynamic status colours cannot be expressed as static Tailwind classes,
+  // so we keep them as plain values and apply via `style` only on the coloured elements.
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case "in_progress":
+        return { bg: "#F0F7EC", text: "#3B6D11", label: "Accepted",  dot: "#639922"  }
+      case "pending":
+        return { bg: "#FEF9EC", text: "#854F0B", label: "Pending",   dot: "#BA7517"  }
+      case "rejected":
+        return { bg: "#FDF1F1", text: "#A32D2D", label: "Rejected",  dot: "#E24B4A"  }
+      case "completed":
+        return { bg: "#EDF4FD", text: "#0C447C", label: "Completed", dot: "#378ADD"  }
+      default:
+        return { bg: "#F5F5F4", text: "#5F5E5A", label: "Unknown",   dot: "#888780"  }
+    }
   }
 
   const renderProject = (project: any) => {
-    const getStatusStyle = (status: string) => {
-      switch (status) {
-        case 'in_progress':
-          return { bg: 'bg-green-50', text: 'text-green-600', label: 'ACCEPTED' }
-        case 'pending':
-          return { bg: 'bg-yellow-50', text: 'text-yellow-600', label: 'PENDING' }
-        case 'rejected':
-          return { bg: 'bg-red-50', text: 'text-red-600', label: 'REJECTED' }
-        case 'completed':
-          return { bg: 'bg-blue-50', text: 'text-blue-600', label: 'COMPLETED' }
-        default:
-          return { bg: 'bg-gray-50', text: 'text-gray-600', label: 'UNKNOWN' }
-      }
-    }
-    
-    const statusStyle = getStatusStyle(project.status)
-    
+    const config = getStatusConfig(project.status)
+
     return (
-      <View key={project.id} className="bg-white rounded-2xl p-4 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 }}>
-        <View className="flex-row justify-between items-start mb-2">
-          <Text className="text-lg font-semibold text-gray-900 flex-1 mr-2">{project.title}</Text>
-          <View className={`px-2 py-1 rounded ${statusStyle.bg}`}>
-            <Text className={`text-xs font-semibold ${statusStyle.text}`}>
-              {statusStyle.label}
+      <View
+        key={project.id}
+        className="bg-white rounded-xl p-4 mb-2.5"
+        style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
+      >
+        {/* Header row */}
+        <View className="flex-row justify-between items-center mb-2.5">
+          <Text className="text-sm font-medium text-gray-900 flex-1 mr-2.5" numberOfLines={2}>
+            {project.title}
+          </Text>
+          {/* Badge — bg & text colour are dynamic, structure is NativeWind */}
+          <View
+            className="flex-row items-center px-2 py-0.5 rounded-md"
+            style={{ backgroundColor: config.bg }}
+          >
+            <View
+              className="w-1.5 h-1.5 rounded-full mr-1.5"
+              style={{ backgroundColor: config.dot }}
+            />
+            <Text className="text-xs font-medium" style={{ color: config.text }}>
+              {config.label}
             </Text>
           </View>
         </View>
 
-        <Text className="text-gray-600 text-sm mb-2">Client: {project.client}</Text>
+        {/* Client + category */}
+        <Text className="text-xs text-gray-500 mb-3">
+          {project.client} · {project.category}
+        </Text>
 
-      {project.quotation && (
-        <View className="bg-green-50 rounded-lg p-3 mb-2">
-          <Text className="text-green-800 font-semibold text-sm">Your Quotation: {project.quotation}</Text>
+        {/* Quotation — left border accent, no filled box */}
+        {project.quotation && (
+          <View
+            className="pl-2.5 mb-2.5"
+            style={{ borderLeftWidth: 2, borderLeftColor: "#639922" }}
+          >
+            <Text
+              className="text-[10px] font-medium uppercase mb-0.5"
+              style={{ color: "#639922", letterSpacing: 0.4 }}
+            >
+              Quotation
+            </Text>
+            <Text className="text-[13px] font-medium text-gray-900">
+              {project.quotation}
+            </Text>
+          </View>
+        )}
+
+        {/* Conditions — plain inline text, no filled box */}
+        {project.conditions ? (
+          <Text className="text-xs text-gray-500 mb-3 leading-[18px]">
+            Terms: {project.conditions}
+          </Text>
+        ) : null}
+
+        {/* Footer */}
+        <View
+          className="flex-row justify-between items-center pt-2.5"
+          style={{ borderTopWidth: 0.5, borderTopColor: "#F3F4F6" }}
+        >
+          <Text className="text-[11px] text-gray-400">
+            Applied{" "}
+            {new Date(project.startDate).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </Text>
+          <Text className="text-[13px] font-medium text-gray-900">{project.budget}</Text>
         </View>
-      )}
-
-      {project.conditions && (
-        <View className="bg-blue-50 rounded-lg p-3 mb-2">
-          <Text className="text-blue-800 text-sm">Terms: {project.conditions}</Text>
-        </View>
-      )}
-
-      <Text className="text-gray-400 text-xs mt-1">
-        Applied: {new Date(project.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-      </Text>
-
-      <View className="flex-row justify-between items-center">
-        <View className="bg-gray-100 px-2 py-1 rounded border border-gray-200">
-          <Text className="text-gray-500 text-xs font-medium">{project.category}</Text>
-        </View>
-        <Text className="text-gray-700 font-semibold">{project.budget}</Text>
       </View>
-    </View>
-  )}
+    )
+  }
 
   const renderPersonalInfo = () => (
-    <View className="px-4 py-4">
-      {/* Name Section */}
-      <View className="bg-white rounded-2xl p-4 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4 }}>
-        <View className="flex-row justify-between items-center border-b border-gray-100 pb-3">
+    <View className="px-4 pt-5">
+
+      {/* Full name */}
+      <View
+        className="bg-white rounded-xl p-4 mb-2.5"
+        style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
+      >
+        <View className="flex-row justify-between items-start">
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900 mb-1">Please fill in your name</Text>
-            <Text className="text-gray-600">{user?.fullName || "Not provided"}</Text>
+            <Text
+              className="text-[11px] font-medium text-gray-400 uppercase mb-1.5"
+              style={{ letterSpacing: 0.5 }}
+            >
+              Full name
+            </Text>
+            <Text className="text-sm font-medium text-gray-900">
+              {user?.fullName || "Please fill in your name"}
+            </Text>
           </View>
-          <TouchableOpacity>
-            <Ionicons name="pencil" size={20} color="#6B7280" />
+          <TouchableOpacity className="p-1">
+            <Ionicons name="pencil" size={16} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* About You Section */}
-      <View className="bg-white rounded-2xl p-4 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4 }}>
-        <View className="flex-row justify-between items-start border-b border-gray-100 pb-3">
+      {/* About you */}
+      <View
+        className="bg-white rounded-xl p-4 mb-2.5"
+        style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
+      >
+        <View className="flex-row justify-between items-start">
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900 mb-2">About you</Text>
-            <Text className="text-gray-500 text-sm leading-5">
+            <Text
+              className="text-[11px] font-medium text-gray-400 uppercase mb-1.5"
+              style={{ letterSpacing: 0.5 }}
+            >
+              About you
+            </Text>
+            <Text className="text-[13px] text-gray-500 leading-5">
               Write important information that clients might need to know
             </Text>
           </View>
-          <TouchableOpacity>
-            <Ionicons name="pencil" size={20} color="#6B7280" />
+          <TouchableOpacity className="p-1">
+            <Ionicons name="pencil" size={16} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Education and Experience Section */}
-      <View className="bg-white rounded-2xl p-4 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4 }}>
-        <View className="flex-row justify-between items-start border-b border-gray-100 pb-3">
+      {/* Education and experience */}
+      <View
+        className="bg-white rounded-xl p-4 mb-2.5"
+        style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
+      >
+        <View className="flex-row justify-between items-start">
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900 mb-2">Education and Experience</Text>
-            <Text className="text-gray-500 text-sm leading-5">Add the education you have and past work experience</Text>
+            <Text
+              className="text-[11px] font-medium text-gray-400 uppercase mb-1.5"
+              style={{ letterSpacing: 0.5 }}
+            >
+              Education and experience
+            </Text>
+            <Text className="text-[13px] text-gray-500 leading-5">
+              Add the education you have and past work experience
+            </Text>
           </View>
-          <TouchableOpacity>
-            <Ionicons name="add" size={24} color="#6B7280" />
+          <TouchableOpacity className="p-1">
+            <Ionicons name="add" size={18} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Address and Region Section */}
-      <View className="bg-white rounded-2xl p-4 mb-4" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4 }}>
-        <View className="flex-row justify-between items-start border-b border-gray-100 pb-3">
+      {/* Address and region */}
+      <View
+        className="bg-white rounded-xl p-4 mb-2.5"
+        style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
+      >
+        <View className="flex-row justify-between items-start">
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900 mb-2">Address and Region</Text>
-            <Text className="text-gray-500 text-sm leading-5">
+            <Text
+              className="text-[11px] font-medium text-gray-400 uppercase mb-1.5"
+              style={{ letterSpacing: 0.5 }}
+            >
+              Address and region
+            </Text>
+            <Text className="text-[13px] text-gray-500 leading-5">
               We do not share your address with clients, it is needed to show you jobs near you
             </Text>
           </View>
-          <TouchableOpacity>
-            <Ionicons name="add" size={24} color="#6B7280" />
+          <TouchableOpacity className="p-1">
+            <Ionicons name="add" size={18} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
       </View>
+
     </View>
   )
 
   const renderProjects = () => {
     if (loading) {
       return (
-        <View className="px-4 py-8 items-center">
-          <ActivityIndicator size="large" color="#3B82F6" />
-          <Text className="text-gray-500 mt-4">Loading your applications...</Text>
+        <View className="py-12 items-center">
+          <ActivityIndicator size="large" color="#111827" />
+          <Text className="text-gray-400 mt-3.5 text-[13px]">
+            Loading your applications...
+          </Text>
         </View>
       )
     }
 
     return (
-      <View className="px-4 py-4">
-        <Text className="text-xl font-bold text-gray-900 mb-4">My Applications</Text>
+      <View className="px-4 pt-5">
 
-        {/* Accepted Projects */}
+        {/* Section label */}
+        <Text
+          className="text-[11px] font-medium text-gray-400 uppercase mb-4"
+          style={{ letterSpacing: 0.6 }}
+        >
+          My applications
+        </Text>
+
+        {/* Accepted */}
         {acceptedProjects.length > 0 && (
-          <View className="mb-6">
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-              <Text className="text-lg font-semibold text-gray-900 ml-2">Accepted ({acceptedProjects.length})</Text>
+          <View className="mb-5">
+            <View className="flex-row items-center mb-2.5">
+              <View className="w-1.5 h-1.5 rounded-full bg-green-700 mr-2" />
+              <Text className="text-[13px] font-medium text-gray-900">
+                Accepted · {acceptedProjects.length}
+              </Text>
             </View>
             {acceptedProjects.map(renderProject)}
           </View>
         )}
 
-        {/* Pending Applications */}
+        {/* Pending */}
         {pendingProjects.length > 0 && (
-          <View className="mb-6">
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="time-outline" size={20} color="#F59E0B" />
-              <Text className="text-lg font-semibold text-gray-900 ml-2">Pending ({pendingProjects.length})</Text>
+          <View className="mb-5">
+            <View className="flex-row items-center mb-2.5">
+              <View className="w-1.5 h-1.5 rounded-full bg-amber-600 mr-2" />
+              <Text className="text-[13px] font-medium text-gray-900">
+                Pending · {pendingProjects.length}
+              </Text>
             </View>
             {pendingProjects.map(renderProject)}
           </View>
         )}
 
-        {/* Rejected Applications */}
+        {/* Rejected */}
         {rejectedProjects.length > 0 && (
-          <View className="mb-6">
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="close-circle" size={20} color="#EF4444" />
-              <Text className="text-lg font-semibold text-gray-900 ml-2">Rejected ({rejectedProjects.length})</Text>
+          <View className="mb-5">
+            <View className="flex-row items-center mb-2.5">
+              <View className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2" />
+              <Text className="text-[13px] font-medium text-gray-900">
+                Rejected · {rejectedProjects.length}
+              </Text>
             </View>
             {rejectedProjects.map(renderProject)}
           </View>
         )}
 
-        {/* Completed Projects */}
+        {/* Completed */}
         {completedProjects.length > 0 && (
-          <View>
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="trophy" size={20} color="#3B82F6" />
-              <Text className="text-lg font-semibold text-gray-900 ml-2">Completed ({completedProjects.length})</Text>
+          <View className="mb-5">
+            <View className="flex-row items-center mb-2.5">
+              <View className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2" />
+              <Text className="text-[13px] font-medium text-gray-900">
+                Completed · {completedProjects.length}
+              </Text>
             </View>
             {completedProjects.map(renderProject)}
           </View>
         )}
 
+        {/* Empty state */}
         {userProjects.length === 0 && (
-          <View className="bg-white rounded-2xl p-8 items-center">
-            <Ionicons name="briefcase-outline" size={48} color="#9CA3AF" />
-            <Text className="text-gray-500 text-lg font-medium mt-4">No applications yet</Text>
-            <Text className="text-gray-400 text-center mt-2">
+          <View
+            className="bg-white rounded-xl p-10 items-center"
+            style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
+          >
+            <Ionicons name="briefcase-outline" size={36} color="#D1D5DB" />
+            <Text className="text-gray-700 text-sm font-medium mt-4">
+              No applications yet
+            </Text>
+            <Text className="text-gray-400 text-[13px] text-center mt-1.5 leading-5">
               Start browsing available tasks to begin your freelancing journey!
             </Text>
           </View>
         )}
+
       </View>
     )
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
+    <SafeAreaView className="flex-1 bg-white">
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
+      {/* Verification Modal */}
       <Modal
         visible={showVerificationModal}
         transparent={true}
         animationType="fade"
         onRequestClose={() => setShowVerificationModal(false)}
       >
-        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+        <View className="flex-1 bg-black/40 justify-center items-center px-6">
           <View className="bg-white rounded-2xl p-6 w-full max-w-sm">
-            <TouchableOpacity className="absolute top-4 right-4 z-10" onPress={() => setShowVerificationModal(false)}>
-              <Ionicons name="close" size={24} color="#6B7280" />
+            <TouchableOpacity
+              className="absolute top-4 right-4 z-10 p-1"
+              onPress={() => setShowVerificationModal(false)}
+            >
+              <Ionicons name="close" size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
             <View className="items-center">
-              <Text className="text-xl font-bold text-gray-900 mb-3 text-center">Verify your account</Text>
-              <Text className="text-gray-600 text-center mb-6 leading-5">
+              <Text className="text-base font-medium text-gray-900 mb-2.5 text-center">
+                Verify your account
+              </Text>
+              <Text className="text-[13px] text-gray-500 text-center mb-6 leading-5">
                 Clients choose specialists with a verified ID/Passport.{"\n"}It only takes a minute.
               </Text>
 
               <TouchableOpacity
-                className="bg-gray-900 rounded-lg px-6 py-3 w-full"
+                className="bg-gray-900 rounded-[10px] px-6 py-3.5 w-full"
                 activeOpacity={0.85}
-                style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 6 }}
-                onPress={() => {
-                  // Handle verification process
-                  setShowVerificationModal(false)
-                }}
+                onPress={() => setShowVerificationModal(false)}
               >
-                <Text className="text-white font-semibold text-center">Verify your account</Text>
+                <Text className="text-white font-medium text-center text-sm">
+                  Verify your account
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* User Info Section */}
-        <View className="bg-white mx-4 mt-4 rounded-2xl p-6" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 8 }}>
-          <View className="items-center mb-4">
+
+        {/* Profile card */}
+        <View
+          className="bg-white mx-4 mt-4 rounded-2xl p-6"
+          style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
+        >
+          <View className="items-center mb-5">
             <Image
               source={{ uri: user?.imageUrl || "/diverse-user-avatars.png" }}
-              className="w-24 h-24 rounded-full mb-3"
+              className="rounded-full mb-3"
+              style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 0.5, borderColor: "#E5E7EB" }}
             />
-            <Text className="text-2xl font-bold text-gray-900">{user?.fullName || "User"}</Text>
-            <Text className="text-gray-500 text-base">{user?.primaryEmailAddress?.emailAddress}</Text>
+            <Text className="text-lg font-semibold text-gray-900 mb-0.5">
+              {user?.fullName || "User"}
+            </Text>
+            <Text className="text-[13px] text-gray-400">
+              {user?.primaryEmailAddress?.emailAddress}
+            </Text>
           </View>
 
-          {/* Stats */}
-          <View className="flex-row justify-around border-t border-gray-100 pt-4">
+          {/* Stats — contained metric tiles */}
+          <View
+            className="flex-row gap-2 pt-4"
+            style={{ borderTopWidth: 0.5, borderTopColor: "#F3F4F6" }}
+          >
             {loading ? (
-              <ActivityIndicator size="small" color="#3B82F6" />
+              <ActivityIndicator size="small" color="#111827" />
             ) : (
               <>
-                <View className="items-center">
-                  <Text className="text-2xl font-bold text-gray-900">{userProjects.length}</Text>
-                  <Text className="text-gray-500 text-sm">Applications</Text>
+                <View className="flex-1 bg-gray-50 rounded-[10px] p-3 items-center">
+                  <Text className="text-xl font-medium text-gray-900">{userProjects.length}</Text>
+                  <Text className="text-[11px] text-gray-400 mt-0.5">Applications</Text>
                 </View>
-                <View className="items-center">
-                  <Text className="text-2xl font-bold text-green-600">{acceptedProjects.length}</Text>
-                  <Text className="text-gray-500 text-sm">Accepted</Text>
+                <View className="flex-1 bg-gray-50 rounded-[10px] p-3 items-center">
+                  <Text className="text-xl font-medium text-gray-900">{acceptedProjects.length}</Text>
+                  <Text className="text-[11px] text-gray-400 mt-0.5">Accepted</Text>
                 </View>
-                <View className="items-center">
-                  <Text className="text-2xl font-bold text-yellow-500">{pendingProjects.length}</Text>
-                  <Text className="text-gray-500 text-sm">Pending</Text>
+                <View className="flex-1 bg-gray-50 rounded-[10px] p-3 items-center">
+                  <Text className="text-xl font-medium text-gray-900">{pendingProjects.length}</Text>
+                  <Text className="text-[11px] text-gray-400 mt-0.5">Pending</Text>
                 </View>
               </>
             )}
           </View>
         </View>
 
-        {/* Horizontal Tab Navigation */}
-        <View className="mx-4 mt-4 bg-white rounded-2xl" style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4 }}>
-          <View className="flex-row">
+        {/* Tab navigation — flat, no elevation */}
+        <View
+          className="mx-4 mt-4 flex-row"
+          style={{ borderBottomWidth: 0.5, borderBottomColor: "#E5E7EB" }}
+        >
+          {[
+            { key: "projects", label: "Projects" },
+            { key: "personal", label: "Personal info" },
+            { key: "wallet",   label: "Wallet" },
+          ].map((tab) => (
             <TouchableOpacity
-              className={`flex-1 py-4 items-center border-b-2 ${
-                activeTab === "projects" ? "border-blue-500" : "border-transparent"
-              }`}
-              onPress={() => setActiveTab("projects")}
+              key={tab.key}
+              className="flex-1 py-3 items-center"
+              style={{
+                borderBottomWidth: activeTab === tab.key ? 1.5 : 0,
+                borderBottomColor: activeTab === tab.key ? "#111827" : "transparent",
+                marginBottom: -0.5,
+              }}
+              onPress={() => setActiveTab(tab.key)}
             >
-              <Text className={`font-semibold ${activeTab === "projects" ? "text-blue-500" : "text-gray-500"}`}>
-                Projects
+              <Text
+                className="text-[13px]"
+                style={{
+                  fontWeight: activeTab === tab.key ? "500" : "400",
+                  color: activeTab === tab.key ? "#111827" : "#9CA3AF",
+                }}
+              >
+                {tab.label}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              className={`flex-1 py-4 items-center border-b-2 ${
-                activeTab === "personal" ? "border-blue-500" : "border-transparent"
-              }`}
-              onPress={() => setActiveTab("personal")}
-            >
-              <Text className={`font-semibold ${activeTab === "personal" ? "text-blue-500" : "text-gray-500"}`}>
-                Personal info
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className={`flex-1 py-4 items-center border-b-2 ${
-                activeTab === "wallet" ? "border-blue-500" : "border-transparent"
-              }`}
-              onPress={() => setActiveTab("wallet")}
-            >
-              <Text className={`font-semibold ${activeTab === "wallet" ? "text-blue-500" : "text-gray-500"}`}>
-                Wallet
-              </Text>
-            </TouchableOpacity>
-          </View>
+          ))}
         </View>
 
-        {/* Conditional Content Rendering Based on Active Tab */}
+        {/* Tab content */}
         {activeTab === "projects" ? (
           renderProjects()
         ) : activeTab === "personal" ? (
@@ -377,6 +502,10 @@ const ProfileScreen = () => {
         ) : (
           <WalletComponent />
         )}
+
+        {/* Bottom padding */}
+        <View className="h-8" />
+
       </ScrollView>
     </SafeAreaView>
   )

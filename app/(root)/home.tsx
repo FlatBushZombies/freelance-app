@@ -2,8 +2,12 @@
 
 import { NotificationBell } from "@/components/Notifications"
 import { ApplicationModal } from "@/components/ApplicationModal"
-import { fetchAPI } from "@/lib/fetch"
-import { useUser } from "@clerk/clerk-expo"
+import {
+  ApplicationRadar,
+  type ApplicationRadarItem,
+} from "@/components/ApplicationRadar"
+import { fetchAPI, getApiUrl } from "@/lib/fetch"
+import { useAuth, useUser } from "@clerk/clerk-expo"
 import { router } from "expo-router"
 import { useEffect, useState, useRef } from "react"
 import {
@@ -90,6 +94,7 @@ interface Job {
 
 const Home = () => {
   const { user, isSignedIn } = useUser()
+  const { getToken } = useAuth()
 
   const [jobs, setJobs] = useState<Job[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -98,6 +103,8 @@ const Home = () => {
   const [userSkills, setUserSkills] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set())
+  const [applicationRadar, setApplicationRadar] = useState<ApplicationRadarItem[]>([])
+  const [applicationRadarLoading, setApplicationRadarLoading] = useState(true)
   const [applyingJobs, setApplyingJobs] = useState<Set<string>>(new Set())
   const [modalVisible, setModalVisible] = useState(false)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
@@ -111,6 +118,7 @@ const Home = () => {
 
   const loadAppliedJobs = async () => {
     try {
+      setApplicationRadarLoading(true)
       if (!user?.id) return
       const stored = await AsyncStorage.getItem(`appliedJobs_${user.id}`)
       if (stored) {
@@ -118,8 +126,8 @@ const Home = () => {
         setAppliedJobs(new Set(jobIds))
       }
       try {
-        const token = await user.getIdToken()
-        const response = await fetch(`https://quickhands-api.vercel.app/api/applications/my`, {
+        const token = await getToken()
+        const response = await fetch(getApiUrl("/api/applications/my"), {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (response.ok) {
@@ -127,14 +135,22 @@ const Home = () => {
           if (data.success && Array.isArray(data.data)) {
             const appliedJobIds = data.data.map((app: any) => String(app.jobId))
             setAppliedJobs(new Set(appliedJobIds))
+            setApplicationRadar(data.data.slice(0, 6))
             await AsyncStorage.setItem(`appliedJobs_${user.id}`, JSON.stringify(appliedJobIds))
+          } else {
+            setApplicationRadar([])
           }
+        } else {
+          setApplicationRadar([])
         }
       } catch (apiError) {
         console.warn("[Apply] Could not fetch applications from API:", apiError)
+        setApplicationRadar([])
       }
     } catch (e) {
       console.error("Error loading applied jobs", e)
+    } finally {
+      setApplicationRadarLoading(false)
     }
   }
 
@@ -153,7 +169,7 @@ const Home = () => {
 
   const fetchJobs = async () => {
     try {
-      const response = await fetch("https://quickhands-api.vercel.app/api/jobs")
+      const response = await fetch(getApiUrl("/api/jobs"))
       const data = await response.json()
       if (data.success && Array.isArray(data.data)) {
         const mapped = data.data.map((job: any) => {
@@ -189,7 +205,7 @@ const Home = () => {
     if (!query.trim()) { fetchJobs(); return }
     setIsSearching(true)
     try {
-      const response = await fetch(`https://quickhands-api.vercel.app/api/jobs/search?q=${encodeURIComponent(query)}`)
+      const response = await fetch(getApiUrl(`/api/jobs/search?q=${encodeURIComponent(query)}`))
       const data = await response.json()
       if (data.success && Array.isArray(data.data)) {
         const mapped = data.data.map((job: any) => {
@@ -239,8 +255,8 @@ const Home = () => {
     if (!selectedJob || !user?.id) return
     setApplyingJobs((s) => new Set(s).add(selectedJob.id))
     try {
-      const token = await user.getIdToken()
-      const response = await fetch(`https://quickhands-api.vercel.app/api/jobs/${selectedJob.id}/apply`, {
+      const token = await getToken()
+      const response = await fetch(getApiUrl(`/api/jobs/${selectedJob.id}/apply`), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -267,14 +283,39 @@ const Home = () => {
           .catch((err) => console.warn("Failed to save to storage:", err))
         return updated
       })
+      await loadAppliedJobs()
       const message = data.alreadyApplied ? "You've already applied to this job" : "The client has been notified"
       Toast.show({ type: "success", text1: data.alreadyApplied ? "Already applied" : "Applied successfully", text2: message, position: "bottom", visibilityTime: 3000, autoHide: true })
+      if (data.conversation?.conversationId) {
+        router.push({
+          pathname: "/(root)/chat",
+          params: {
+            conversationId: data.conversation.conversationId,
+            otherClerkId: data.conversation.otherClerkId,
+            otherDisplayName: data.conversation.otherDisplayName,
+            jobTitle: data.conversation.jobTitle || selectedJob.title,
+          },
+        })
+      }
     } catch (error) {
       console.error("Apply error:", error)
       Toast.show({ type: "error", text1: "Application failed", text2: error instanceof Error ? error.message : "Please try again", position: "bottom", visibilityTime: 3000, autoHide: true })
     } finally {
       setApplyingJobs((s) => { const next = new Set(s); next.delete(selectedJob.id); return next })
     }
+  }
+
+  const openApplicationConversation = (application: ApplicationRadarItem) => {
+    if (!application.conversationId) return
+
+    router.push({
+      pathname: "/(root)/chat",
+      params: {
+        conversationId: application.conversationId,
+        otherDisplayName: application.job?.clientName || "Client",
+        jobTitle: application.job?.serviceType || "Application Chat",
+      },
+    })
   }
 
   const timeAgo = (date: string) => {
@@ -1151,6 +1192,12 @@ const Home = () => {
               )
             })}
           </ScrollView>
+
+          <ApplicationRadar
+            applications={applicationRadar}
+            loading={applicationRadarLoading}
+            onOpenChat={openApplicationConversation}
+          />
 
           {/* ── Jobs list ── */}
           {filteredJobs.length === 0 ? (

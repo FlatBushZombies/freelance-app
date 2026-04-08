@@ -7,6 +7,7 @@ import { useSession } from "@clerk/clerk-expo"
 import { Feather } from "@expo/vector-icons"
 import { IMAGES } from "@/constants"
 import { SplashScreen } from "@/components/SplashScreen"
+import { getApiUrl } from "@/lib/fetch"
 
 export default function Index() {
   const { session, isLoaded } = useSession()
@@ -20,7 +21,7 @@ export default function Index() {
 
       try {
         const response = await fetch(
-          `https://quickhands-api.vercel.app/api/user/get?clerkId=${userId}`
+          getApiUrl(`/api/user/get?clerkId=${userId}`)
         )
         const data = await response.json()
 
