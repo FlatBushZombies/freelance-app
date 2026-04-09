@@ -47,6 +47,16 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
   const getNotificationCopy = (message: string) => {
     const normalized = message.toLowerCase()
 
+    if (normalized.includes("in your area")) {
+      return {
+        title: "Job in your area",
+        body: message,
+        chip: "Area",
+        color: "#15803D",
+        bg: "#DCFCE7",
+      }
+    }
+
     if (normalized.includes("accepted") && (normalized.includes("phone number") || normalized.includes("contact"))) {
       return {
         title: "Offer accepted",
@@ -97,6 +107,7 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
 
   const renderNotification = ({ item }: { item: any }) => {
     const copy = getNotificationCopy(item.message)
+    const showAreaBadge = item.message.toLowerCase().includes("in your area")
 
     return (
       <TouchableOpacity
@@ -149,6 +160,21 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
             <Text style={{ fontSize: 14, color: "#4B5563", lineHeight: 20, marginBottom: 8 }}>
               {copy.body}
             </Text>
+
+            {showAreaBadge ? (
+              <View
+                style={{
+                  alignSelf: "flex-start",
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 999,
+                  backgroundColor: "#ECFDF5",
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: "700", color: "#15803D" }}>In your Area</Text>
+              </View>
+            ) : null}
 
             <Text style={{ fontSize: 13, color: "#6B7280" }}>{formatTimeAgo(item.createdAt)}</Text>
           </View>

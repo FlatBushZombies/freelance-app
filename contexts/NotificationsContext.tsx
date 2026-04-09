@@ -57,6 +57,10 @@ function mergeNotifications(current: Notification[], incoming: Notification[]) {
 function toastForMessage(message: string) {
   const normalized = message.toLowerCase();
 
+  if (normalized.includes("in your area")) {
+    return { type: "success" as const, title: "Job in your area" };
+  }
+
   if (normalized.includes("accepted")) {
     return { type: "success" as const, title: "Offer accepted" };
   }

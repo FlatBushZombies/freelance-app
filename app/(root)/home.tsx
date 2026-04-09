@@ -10,6 +10,7 @@ import { fetchAPI, getApiUrl } from "@/lib/fetch"
 import { useAuth, useUser } from "@clerk/clerk-expo"
 import { router } from "expo-router"
 import { useEffect, useState, useRef } from "react"
+import * as Location from "expo-location"
 import {
   ActivityIndicator,
   Alert,
@@ -90,6 +91,16 @@ interface Job {
   clientAvatar: string | null
   clientRating: number
   isMatch?: boolean
+  inYourArea?: boolean
+  distanceKm?: number | null
+}
+
+interface NearbyLocationState {
+  loading: boolean
+  label: string | null
+  city: string | null
+  latitude: number | null
+  longitude: number | null
 }
 
 const Home = () => {
@@ -109,12 +120,106 @@ const Home = () => {
   const [modalVisible, setModalVisible] = useState(false)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [activeFilter, setActiveFilter] = useState("All")
+  const [nearbyLocation, setNearbyLocation] = useState<NearbyLocationState>({
+    loading: false,
+    label: null,
+    city: null,
+    latitude: null,
+    longitude: null,
+  })
 
   const scrollY = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     if (isSignedIn === false) router.replace("/")
   }, [isSignedIn])
+
+  const syncFreelancerLocation = async (location: Omit<NearbyLocationState, "loading">) => {
+    try {
+      if (!user?.id) return
+      const token = await getToken()
+      if (!token) return
+
+      await fetch(getApiUrl("/api/user/location"), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          clerkId: user.id,
+          label: location.label,
+          city: location.city,
+          latitude: location.latitude,
+          longitude: location.longitude,
+        }),
+      })
+    } catch (error) {
+      console.warn("[Location] Failed to sync freelancer location", error)
+    }
+  }
+
+  const loadNearbyLocation = async () => {
+    try {
+      setNearbyLocation((current) => ({ ...current, loading: true }))
+      const { status } = await Location.requestForegroundPermissionsAsync()
+
+      if (status !== "granted") {
+        setNearbyLocation({
+          loading: false,
+          label: null,
+          city: null,
+          latitude: null,
+          longitude: null,
+        })
+        return
+      }
+
+      const currentPosition = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      })
+      const [result] = await Location.reverseGeocodeAsync({
+        latitude: currentPosition.coords.latitude,
+        longitude: currentPosition.coords.longitude,
+      })
+
+      const nextLocation = {
+        label:
+          result?.city ||
+          result?.district ||
+          result?.subregion ||
+          result?.region ||
+          "Your current area",
+        city: result?.city || result?.district || result?.subregion || null,
+        latitude: currentPosition.coords.latitude,
+        longitude: currentPosition.coords.longitude,
+      }
+
+      setNearbyLocation({
+        loading: false,
+        ...nextLocation,
+      })
+      await syncFreelancerLocation(nextLocation)
+    } catch (error) {
+      console.warn("[Location] Failed to load freelancer area", error)
+      setNearbyLocation({
+        loading: false,
+        label: null,
+        city: null,
+        latitude: null,
+        longitude: null,
+      })
+    }
+  }
+
+  const buildNearbyQuery = () => {
+    const params = new URLSearchParams()
+    if (nearbyLocation.latitude !== null) params.set("latitude", String(nearbyLocation.latitude))
+    if (nearbyLocation.longitude !== null) params.set("longitude", String(nearbyLocation.longitude))
+    if (nearbyLocation.city) params.set("city", nearbyLocation.city)
+    if (nearbyLocation.label) params.set("label", nearbyLocation.label)
+    return params.toString()
+  }
 
   const loadAppliedJobs = async () => {
     try {
@@ -157,7 +262,7 @@ const Home = () => {
   const fetchUserSkills = async () => {
     try {
       if (!user?.id) return
-      const response = await fetchAPI(`/api/user/get?clerkId=${user.id}`)
+      const response = await fetchAPI<{ user?: { skills?: string | null } }>(`/api/user/get?clerkId=${user.id}`)
       if (response.user?.skills) {
         setUserSkills(response.user.skills)
         setSearchQuery(response.user.skills)
@@ -169,7 +274,8 @@ const Home = () => {
 
   const fetchJobs = async () => {
     try {
-      const response = await fetch(getApiUrl("/api/jobs"))
+      const nearbyQuery = buildNearbyQuery()
+      const response = await fetch(getApiUrl(`/api/jobs${nearbyQuery ? `?${nearbyQuery}` : ""}`))
       const data = await response.json()
       if (data.success && Array.isArray(data.data)) {
         const mapped = data.data.map((job: any) => {
@@ -180,12 +286,14 @@ const Home = () => {
             description: job.additionalInfo || "No description available",
             budget: Number.parseFloat(job.maxPrice) || 0,
             category,
-            location: job.specialistChoice || "Remote",
+            location: job.location?.label || job.location?.city || job.specialistChoice || "Remote",
             createdAt: job.createdAt || new Date().toISOString(),
             clientName: job.userName || "Anonymous Client",
             clientAvatar: job.userAvatar || null,
             clientRating: 4.5,
             isMatch: userSkills && category.toLowerCase().includes(userSkills.toLowerCase()),
+            inYourArea: Boolean(job.proximity?.inYourArea),
+            distanceKm: typeof job.proximity?.distanceKm === "number" ? job.proximity.distanceKm : null,
           }
         })
         setJobs(mapped)
@@ -205,7 +313,10 @@ const Home = () => {
     if (!query.trim()) { fetchJobs(); return }
     setIsSearching(true)
     try {
-      const response = await fetch(getApiUrl(`/api/jobs/search?q=${encodeURIComponent(query)}`))
+      const nearbyQuery = buildNearbyQuery()
+      const response = await fetch(
+        getApiUrl(`/api/jobs/search?q=${encodeURIComponent(query)}${nearbyQuery ? `&${nearbyQuery}` : ""}`)
+      )
       const data = await response.json()
       if (data.success && Array.isArray(data.data)) {
         const mapped = data.data.map((job: any) => {
@@ -216,12 +327,14 @@ const Home = () => {
             description: job.additionalInfo || "No description available",
             budget: Number.parseFloat(job.maxPrice) || 0,
             category,
-            location: job.specialistChoice || "Remote",
+            location: job.location?.label || job.location?.city || job.specialistChoice || "Remote",
             createdAt: job.createdAt || new Date().toISOString(),
             clientName: job.userName || "Anonymous Client",
             clientAvatar: job.userAvatar || null,
             clientRating: 4.5,
             isMatch: userSkills && category.toLowerCase().includes(userSkills.toLowerCase()),
+            inYourArea: Boolean(job.proximity?.inYourArea),
+            distanceKm: typeof job.proximity?.distanceKm === "number" ? job.proximity.distanceKm : null,
           }
         })
         setJobs(mapped)
@@ -237,8 +350,18 @@ const Home = () => {
   }
 
   useEffect(() => {
-    if (user?.id) { loadAppliedJobs(); fetchUserSkills(); fetchJobs() }
-  }, [user])
+    if (user?.id) {
+      loadAppliedJobs()
+      fetchUserSkills()
+      void loadNearbyLocation()
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchJobs()
+    }
+  }, [nearbyLocation.latitude, nearbyLocation.longitude, nearbyLocation.city, user?.id])
 
   useEffect(() => {
     if (userSkills && jobs.length) searchJobs(userSkills)
@@ -329,12 +452,12 @@ const Home = () => {
     return `${diffDays}d ago`
   }
 
-  const filters = ["All", "Matched", "Recent", "High Budget"]
+  const filters = ["All", "In your Area", "Matched", "High Budget"]
 
   const getFilteredJobs = () => {
     switch (activeFilter) {
+      case "In your Area": return jobs.filter((job) => job.inYourArea)
       case "Matched":     return jobs.filter((j) => j.isMatch)
-      case "Recent":      return [...jobs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       case "High Budget": return [...jobs].sort((a, b) => b.budget - a.budget)
       default:            return jobs
     }
@@ -345,6 +468,7 @@ const Home = () => {
     const isApplied  = appliedJobs.has(item.id)
     const isApplying = applyingJobs.has(item.id)
     const tags       = item.category.split(",").slice(0, 3)
+    const displayTags = item.inYourArea ? ["In your Area", ...tags] : tags
 
     return (
       <TouchableOpacity
@@ -412,7 +536,7 @@ const Home = () => {
               </Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Text style={{ fontFamily: "Quicksand-Medium", fontSize: 11.5, color: C.pebble }}>
-                  📍 {item.location}
+                  📍 {item.location}{item.distanceKm !== null ? ` · ${item.distanceKm} km` : ""}
                 </Text>
                 <View style={{ width: 2, height: 2, borderRadius: 1, backgroundColor: C.pebble, opacity: 0.5 }} />
                 <Text style={{ fontFamily: "Quicksand-Medium", fontSize: 11.5, color: C.pebble }}>
@@ -422,7 +546,30 @@ const Home = () => {
             </View>
 
             {/* Match badge — pill, refined */}
-            {item.isMatch && (
+            {item.inYourArea ? (
+              <View style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 5,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 20,
+                backgroundColor: `${C.green}14`,
+                borderWidth: 1,
+                borderColor: `${C.green}28`,
+              }}>
+                <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.green }} />
+                <Text style={{
+                  fontFamily: "Quicksand-Bold",
+                  fontSize: 9.5,
+                  letterSpacing: 0.8,
+                  color: C.green,
+                  textTransform: "uppercase",
+                }}>
+                  In your area
+                </Text>
+              </View>
+            ) : item.isMatch && (
               <View style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -477,23 +624,38 @@ const Home = () => {
 
           {/* ── Tags — refined pills ── */}
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
-            {tags.map((tag, i) => (
+            {displayTags.map((tag, i) => (
               <View
                 key={i}
                 style={{
                   paddingHorizontal: 11,
                   paddingVertical: 5,
                   borderRadius: 8,
-                  backgroundColor: i === 0 && item.isMatch ? C.mint : C.mist,
+                  backgroundColor:
+                    tag === "In your Area"
+                      ? C.greenLight
+                      : i === 0 && item.isMatch
+                        ? C.mint
+                        : C.mist,
                   borderWidth: 1,
-                  borderColor: i === 0 && item.isMatch ? `${C.fern}22` : "transparent",
+                  borderColor:
+                    tag === "In your Area"
+                      ? `${C.green}25`
+                      : i === 0 && item.isMatch
+                        ? `${C.fern}22`
+                        : "transparent",
                 }}
               >
                 <Text style={{
                   fontFamily: "Quicksand-SemiBold",
                   fontSize: 11,
                   letterSpacing: 0.15,
-                  color: i === 0 && item.isMatch ? C.forest : C.stone,
+                  color:
+                    tag === "In your Area"
+                      ? C.green
+                      : i === 0 && item.isMatch
+                        ? C.forest
+                        : C.stone,
                 }}>
                   {tag.trim()}
                 </Text>
