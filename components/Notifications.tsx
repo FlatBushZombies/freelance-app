@@ -11,7 +11,7 @@ import {
   Pressable,
   RefreshControl,
 } from "react-native"
-import { BellIcon } from "react-native-heroicons/outline"
+import { BellAlertIcon, BellIcon, XMarkIcon } from "react-native-heroicons/outline"
 import { useNotifications } from "@/contexts/NotificationsContext"
 
 interface NotificationBellProps {
@@ -192,7 +192,14 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
         onRequestClose={() => setModalVisible(false)}
       >
         <Pressable className="flex-1 bg-black/50" onPress={() => setModalVisible(false)}>
-          <Pressable className="flex-1 mt-20 bg-white rounded-t-3xl" onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            className="flex-1 mt-20 overflow-hidden rounded-t-[32px] bg-white"
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View className="items-center pt-3">
+              <View className="h-1.5 w-12 rounded-full bg-gray-200" />
+            </View>
+
             <View className="px-6 py-5 border-b border-gray-100 flex-row items-center justify-between">
               <View>
                 <Text className="text-2xl font-bold text-gray-900">Notifications</Text>
@@ -201,16 +208,25 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
                 </Text>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                <TouchableOpacity onPress={() => void markAllAsRead()} disabled={unreadCount === 0}>
-                  <Text style={{ color: unreadCount === 0 ? "#9CA3AF" : "#16A34A", fontWeight: "600" }}>
+                <TouchableOpacity
+                  onPress={() => void markAllAsRead()}
+                  disabled={unreadCount === 0}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    borderRadius: 999,
+                    backgroundColor: unreadCount === 0 ? "#F3F4F6" : "#ECFDF5",
+                  }}
+                >
+                  <Text style={{ color: unreadCount === 0 ? "#9CA3AF" : "#15803D", fontWeight: "600" }}>
                     Read all
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => setModalVisible(false)}
-                  className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
+                  className="w-11 h-11 rounded-full bg-gray-100 items-center justify-center"
                 >
-                  <Text className="text-gray-600 text-lg">Close</Text>
+                  <XMarkIcon size={20} color="#4B5563" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -224,16 +240,16 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
               <View className="flex-1 items-center justify-center px-6">
                 <View
                   style={{
-                    backgroundColor: "#F3F4F6",
-                    width: 120,
-                    height: 120,
-                    borderRadius: 60,
+                    backgroundColor: "#EEF2FF",
+                    width: 96,
+                    height: 96,
+                    borderRadius: 28,
                     alignItems: "center",
                     justifyContent: "center",
                     marginBottom: 24,
                   }}
                 >
-                  <Text style={{ fontSize: 18, fontWeight: "700", color: "#6B7280" }}>Bell</Text>
+                  <BellAlertIcon size={42} color="#4F46E5" />
                 </View>
                 <Text style={{ fontSize: 20, fontWeight: "700", color: "#111827", marginBottom: 8, textAlign: "center" }}>
                   No notifications yet

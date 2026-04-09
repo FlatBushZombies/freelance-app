@@ -72,6 +72,16 @@ function toastForMessage(message: string) {
   return { type: "info" as const, title: "New notification" };
 }
 
+function showToastForNotification(notification: Notification) {
+  const toast = toastForMessage(notification.message);
+  Toast.show({
+    type: toast.type,
+    text1: toast.title,
+    text2: notification.message,
+    visibilityTime: 3500,
+  });
+}
+
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
   const { getToken } = useAuth();
@@ -109,7 +119,19 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         throw new Error(data?.message || data?.error || "Failed to fetch notifications");
       }
 
-      setNotifications((current) => mergeNotifications(current, data.notifications));
+      setNotifications((current) => {
+        const knownIds = new Set(current.map((notification) => notification.id));
+        const nextNotifications = mergeNotifications(current, data.notifications);
+        const newestFreshNotification = data.notifications.find(
+          (notification: Notification) => !knownIds.has(notification.id)
+        );
+
+        if (hasLoadedRef.current && appStateRef.current === "active" && newestFreshNotification) {
+          showToastForNotification(newestFreshNotification);
+        }
+
+        return nextNotifications;
+      });
       hasLoadedRef.current = true;
     } catch (error) {
       console.error("[Notifications] Error fetching notifications", error);
@@ -199,13 +221,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         });
 
         if (hasLoadedRef.current && appStateRef.current === "active") {
-          const toast = toastForMessage(notification.message);
-          Toast.show({
-            type: toast.type,
-            text1: toast.title,
-            text2: notification.message,
-            visibilityTime: 3500,
-          });
+          showToastForNotification(notification);
         }
       });
     })();
