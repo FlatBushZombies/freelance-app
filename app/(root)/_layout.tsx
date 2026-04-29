@@ -2,25 +2,27 @@
 
 import { useEffect, useState } from "react"
 import { Tabs, router } from "expo-router"
-import { ActivityIndicator, Platform, Text, View } from "react-native"
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native"
 import { useUser } from "@clerk/clerk-expo"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ArrowUpOnSquareStackIcon } from "react-native-heroicons/outline"
+import { BlurView } from "expo-blur"
+import { LinearGradient } from "expo-linear-gradient"
 import { Home, MessageCircle, User } from "lucide-react-native"
 import { useNotifications } from "@/contexts/NotificationsContext"
 
-const TAB_BAR_HEIGHT = 74
-const TAB_SLOT_HEIGHT = 58
+const TAB_BAR_HEIGHT = 82
 
 const COLOR = {
-  active: "#708238",
-  activeLight: "rgba(112,130,56,0.18)",
-  activeGlow: "#8ea64c",
-  inactive: "#6B7280",
-  bg: "#000000",
-  border: "#111111",
-  label: "#d1d5db",
-  badge: "#EF4444",
+  background: "#EEF2F3",
+  shellBorder: "rgba(255,255,255,0.86)",
+  shellShadow: "rgba(25,39,52,0.16)",
+  active: "#1F3A4A",
+  activeSoft: "rgba(31,58,74,0.11)",
+  accent: "#6F8B74",
+  inactive: "#80909C",
+  label: "#233746",
+  badge: "#E35D5B",
 }
 
 const TabIcon = ({
@@ -39,99 +41,92 @@ const TabIcon = ({
   return (
     <View
       style={{
-        width: 68,
-        height: TAB_SLOT_HEIGHT,
+        width: 74,
+        height: 58,
         alignItems: "center",
         justifyContent: "center",
-        paddingTop: 4,
       }}
     >
-    <View
-      style={{
-        position: "absolute",
-        top: 4,
-        width: focused ? 18 : 0,
-        height: 3,
-        borderRadius: 999,
-        backgroundColor: focused ? COLOR.active : "transparent",
-        opacity: focused ? 1 : 0,
-      }}
-    />
+      <View
+        style={{
+          minWidth: 58,
+          height: 36,
+          paddingHorizontal: focused ? 14 : 0,
+          borderRadius: 999,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: focused ? COLOR.activeSoft : "transparent",
+        }}
+      >
+        <Icon
+          size={21}
+          color={focused ? COLOR.active : COLOR.inactive}
+          strokeWidth={focused ? 2.4 : 2}
+        />
 
-    <View
-      style={{
-        width: 44,
-        height: 34,
-        borderRadius: 14,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: focused ? COLOR.activeLight : "transparent",
-        ...(focused
-          ? Platform.select({
-              ios: {
-                shadowColor: COLOR.activeGlow,
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.28,
-                shadowRadius: 12,
-              },
-              android: {
-                elevation: 4,
-              },
-            })
-          : {}),
-      }}
-    >
-      <Icon
-        size={21}
-        color={focused ? COLOR.active : COLOR.inactive}
-        strokeWidth={focused ? 2.35 : 1.85}
-      />
-      {badgeCount > 0 ? (
-        <View
-          style={{
-            position: "absolute",
-            top: 2,
-            right: 0,
-            minWidth: 18,
-            height: 18,
-            paddingHorizontal: 4,
-            borderRadius: 9,
-            backgroundColor: COLOR.badge,
-            borderWidth: 1,
-            borderColor: COLOR.bg,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Text
+        {badgeCount > 0 ? (
+          <View
             style={{
-              color: "#ffffff",
-              fontSize: 9,
-              lineHeight: 11,
-              fontWeight: "700",
+              position: "absolute",
+              top: -4,
+              right: focused ? 4 : 14,
+              minWidth: 18,
+              height: 18,
+              paddingHorizontal: 4,
+              borderRadius: 9,
+              backgroundColor: COLOR.badge,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1.5,
+              borderColor: "#F7FAFA",
             }}
           >
-            {badgeLabel}
-          </Text>
-        </View>
-      ) : null}
-    </View>
+            <Text
+              style={{
+                color: "#ffffff",
+                fontSize: 9,
+                lineHeight: 10,
+                fontWeight: "700",
+              }}
+            >
+              {badgeLabel}
+            </Text>
+          </View>
+        ) : null}
+      </View>
 
-    <Text
-      style={{
-        marginTop: 4,
-        fontSize: 10,
-        lineHeight: 13,
-        fontWeight: focused ? "700" : "500",
-        color: focused ? COLOR.label : COLOR.inactive,
-        letterSpacing: 0.22,
-      }}
-    >
-      {label}
-    </Text>
+      <Text
+        style={{
+          marginTop: 6,
+          fontSize: 10,
+          lineHeight: 12,
+          letterSpacing: 0.34,
+          textTransform: "uppercase",
+          fontWeight: focused ? "700" : "600",
+          color: focused ? COLOR.label : COLOR.inactive,
+        }}
+      >
+        {label}
+      </Text>
     </View>
   )
 }
+
+const TabBarShell = () => (
+  <View style={styles.shell}>
+    <BlurView
+      tint={Platform.OS === "ios" ? "light" : "default"}
+      intensity={45}
+      style={StyleSheet.absoluteFill}
+    />
+    <LinearGradient
+      colors={["rgba(255,255,255,0.96)", "rgba(239,245,243,0.92)"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={StyleSheet.absoluteFill}
+    />
+  </View>
+)
 
 export default function Layout() {
   const { isLoaded, isSignedIn } = useUser()
@@ -158,18 +153,23 @@ export default function Layout() {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: COLOR.bg,
+          backgroundColor: COLOR.background,
         }}
       >
         <View
           style={{
-            width: 56,
-            height: 56,
-            borderRadius: 16,
-            backgroundColor: "#111",
+            width: 60,
+            height: 60,
+            borderRadius: 20,
+            backgroundColor: "rgba(255,255,255,0.88)",
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 16,
+            shadowColor: "#1C3140",
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.08,
+            shadowRadius: 18,
+            elevation: 5,
           }}
         >
           <ActivityIndicator size="small" color={COLOR.active} />
@@ -178,11 +178,11 @@ export default function Layout() {
           style={{
             color: COLOR.inactive,
             fontSize: 13,
-            fontWeight: "500",
+            fontWeight: "600",
             letterSpacing: 0.3,
           }}
         >
-          Loading...
+          Loading workspace
         </Text>
       </View>
     )
@@ -195,20 +195,24 @@ export default function Layout() {
         headerShown: false,
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: COLOR.bg,
-          borderTopColor: COLOR.border,
-          borderTopWidth: 1,
-          height: TAB_BAR_HEIGHT + insets.bottom,
-          paddingTop: 6,
-          paddingBottom: Math.max(insets.bottom, 10),
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.28,
-          shadowRadius: 16,
-          elevation: 10,
-        },
-        tabBarItemStyle: {
+          position: "absolute",
+          left: 16,
+          right: 16,
+          bottom: Math.max(insets.bottom, 10),
           height: TAB_BAR_HEIGHT,
+          paddingTop: 10,
+          paddingBottom: 8,
+          backgroundColor: "transparent",
+          borderTopWidth: 0,
+          elevation: 0,
+          shadowColor: COLOR.shellShadow,
+          shadowOffset: { width: 0, height: 16 },
+          shadowOpacity: 1,
+          shadowRadius: 28,
+        },
+        tabBarBackground: () => <TabBarShell />,
+        tabBarItemStyle: {
+          height: TAB_BAR_HEIGHT - 6,
           justifyContent: "center",
           alignItems: "center",
         },
@@ -217,9 +221,7 @@ export default function Layout() {
       <Tabs.Screen
         name="home"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon Icon={Home} focused={focused} label="Home" badgeCount={unreadCount} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon Icon={Home} focused={focused} label="Home" />,
         }}
       />
 
@@ -227,7 +229,7 @@ export default function Layout() {
         name="chat"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon Icon={MessageCircle} focused={focused} label="Chat" />
+            <TabIcon Icon={MessageCircle} focused={focused} label="Board" badgeCount={unreadCount} />
           ),
         }}
       />
@@ -235,9 +237,7 @@ export default function Layout() {
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon Icon={User} focused={focused} label="Profile" />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon Icon={User} focused={focused} label="Profile" />,
         }}
       />
 
@@ -252,3 +252,13 @@ export default function Layout() {
     </Tabs>
   )
 }
+
+const styles = StyleSheet.create({
+  shell: {
+    flex: 1,
+    borderRadius: 32,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: COLOR.shellBorder,
+  },
+})

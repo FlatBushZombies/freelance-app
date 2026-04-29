@@ -1,279 +1,397 @@
 "use client"
+
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  StatusBar,
-  SafeAreaView,
-  Modal,
   ActivityIndicator,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native"
 import { useUser, useAuth } from "@clerk/clerk-expo"
 import { Ionicons } from "@expo/vector-icons"
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
+import { router } from "expo-router"
 import WalletComponent from "@/components/WalletComponent"
 import { getApiUrl } from "@/lib/fetch"
+
+const FALLBACK_PROFILE_IMAGE = require("../../assets/images/quickhands.png")
+
+interface ReviewSummary {
+  averageRating: number
+  reviewCount: number
+  latestReview?: {
+    rating: number
+    comment: string
+    reviewerName: string
+    createdAt: string
+  } | null
+}
+
+interface ProjectItem {
+  id: number
+  jobId: number
+  conversationId?: string
+  title: string
+  client: string
+  clientClerkId?: string
+  status: "accepted" | "pending" | "rejected"
+  startDate: string
+  quotation: string
+  conditions: string
+  category: string
+  budget: string
+  clientReviewSummary: ReviewSummary
+}
+
+interface ReviewItem {
+  id: string
+  rating: number
+  comment: string
+  reviewerName: string
+  createdAt: string
+}
+
+interface ReviewDraft {
+  rating: number
+  comment: string
+}
+
+function StarPicker({
+  rating,
+  onChange,
+}: {
+  rating: number
+  onChange: (value: number) => void
+}) {
+  return (
+    <View className="flex-row gap-2">
+      {[1, 2, 3, 4, 5].map((value) => (
+        <TouchableOpacity key={value} onPress={() => onChange(value)}>
+          <Ionicons
+            name={value <= rating ? "star" : "star-outline"}
+            size={20}
+            color={value <= rating ? "#F59E0B" : "#CBD5E1"}
+          />
+        </TouchableOpacity>
+      ))}
+    </View>
+  )
+}
 
 const ProfileScreen = () => {
   const { user } = useUser()
   const { getToken } = useAuth()
   const [showVerificationModal, setShowVerificationModal] = useState(false)
   const [activeTab, setActiveTab] = useState("projects")
-  const [userProjects, setUserProjects] = useState<any[]>([])
+  const [projects, setProjects] = useState<ProjectItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [reviewSummary, setReviewSummary] = useState<ReviewSummary>({
+    averageRating: 0,
+    reviewCount: 0,
+    latestReview: null,
+  })
+  const [receivedReviews, setReceivedReviews] = useState<ReviewItem[]>([])
+  const [reviewDrafts, setReviewDrafts] = useState<Record<number, ReviewDraft>>({})
+  const [submittingReviewId, setSubmittingReviewId] = useState<number | null>(null)
 
-  useEffect(() => {
-    const fetchApplications = async () => {
-      if (!user?.id) return
+  const fetchProfileData = async () => {
+    if (!user?.id) return
 
-      try {
-        const token = await getToken()
-        if (!token) {
-          setLoading(false)
-          return
-        }
-
-        const response = await fetch(getApiUrl("/api/applications/my"), {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const data = await response.json()
-
-        if (data.success && Array.isArray(data.data)) {
-          const projects = data.data.map((app: any) => ({
-            id: app.id,
-            title: app.jobServiceType || "Untitled Job",
-            client: app.jobOwnerName || "Client",
-            status:
-              app.status === "accepted"
-                ? "in_progress"
-                : app.status === "rejected"
-                ? "rejected"
-                : "pending",
-            startDate: app.createdAt,
-            quotation: app.quotation || "Not specified",
-            conditions: app.conditions || "",
-            category: app.jobServiceType || "General",
-            budget: app.quotation || "N/A",
-          }))
-          setUserProjects(projects)
-        }
-      } catch (error) {
-        console.error("Error fetching applications:", error)
-      } finally {
-        setLoading(false)
+    try {
+      setLoading(true)
+      const token = await getToken()
+      if (!token) {
+        return
       }
-    }
 
-    fetchApplications()
-  }, [getToken, user?.id])
+      const [applicationsResponse, reviewsResponse] = await Promise.all([
+        fetch(getApiUrl("/api/applications/my"), {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(getApiUrl(`/api/user/${user.id}/reviews`)),
+      ])
 
-  const acceptedProjects = userProjects.filter((p) => p.status === "in_progress")
-  const pendingProjects  = userProjects.filter((p) => p.status === "pending")
-  const rejectedProjects = userProjects.filter((p) => p.status === "rejected")
-  const completedProjects = userProjects.filter((p) => p.status === "completed")
+      const applicationsData = await applicationsResponse.json()
+      const reviewsData = await reviewsResponse.json()
 
-  const renderStars = (rating: number) =>
-    Array.from({ length: 5 }, (_, i) => (
-      <Ionicons
-        key={i}
-        name={i < rating ? "star" : "star-outline"}
-        size={14}
-        color={i < rating ? "#F59E0B" : "#D1D5DB"}
-      />
-    ))
+      if (applicationsData.success && Array.isArray(applicationsData.data)) {
+        const mappedProjects = applicationsData.data.map((application: any) => ({
+          id: application.id,
+          jobId: application.jobId,
+          conversationId: application.conversationId,
+          title: application.jobServiceType || "Untitled Job",
+          client: application.jobOwnerName || "Client",
+          clientClerkId: application.jobClerkId || undefined,
+          status: application.status,
+          startDate: application.createdAt,
+          quotation: application.quotation || "Not specified",
+          conditions: application.conditions || "",
+          category: application.jobServiceType || "General",
+          budget: application.quotation || "N/A",
+          clientReviewSummary: application.clientReviewSummary || {
+            averageRating: 0,
+            reviewCount: 0,
+            latestReview: null,
+          },
+        }))
+        setProjects(mappedProjects)
+      } else {
+        setProjects([])
+      }
 
-  // Dynamic status colours cannot be expressed as static Tailwind classes,
-  // so we keep them as plain values and apply via `style` only on the coloured elements.
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case "in_progress":
-        return { bg: "#F0F7EC", text: "#3B6D11", label: "Accepted",  dot: "#639922"  }
-      case "pending":
-        return { bg: "#FEF9EC", text: "#854F0B", label: "Pending",   dot: "#BA7517"  }
-      case "rejected":
-        return { bg: "#FDF1F1", text: "#A32D2D", label: "Rejected",  dot: "#E24B4A"  }
-      case "completed":
-        return { bg: "#EDF4FD", text: "#0C447C", label: "Completed", dot: "#378ADD"  }
-      default:
-        return { bg: "#F5F5F4", text: "#5F5E5A", label: "Unknown",   dot: "#888780"  }
+      if (reviewsData.success) {
+        setReviewSummary(reviewsData.summary || { averageRating: 0, reviewCount: 0, latestReview: null })
+        setReceivedReviews(Array.isArray(reviewsData.reviews) ? reviewsData.reviews : [])
+      } else {
+        setReviewSummary({ averageRating: 0, reviewCount: 0, latestReview: null })
+        setReceivedReviews([])
+      }
+    } catch (error) {
+      console.error("Error fetching freelancer profile data:", error)
+      setProjects([])
+      setReceivedReviews([])
+    } finally {
+      setLoading(false)
     }
   }
 
-  const renderProject = (project: any) => {
+  useEffect(() => {
+    void fetchProfileData()
+  }, [getToken, user?.id])
+
+  const acceptedProjects = projects.filter((project) => project.status === "accepted")
+  const pendingProjects = projects.filter((project) => project.status === "pending")
+  const rejectedProjects = projects.filter((project) => project.status === "rejected")
+
+  const getStatusConfig = (status: ProjectItem["status"]) => {
+    switch (status) {
+      case "accepted":
+        return { bg: "#ECFDF5", text: "#166534", label: "Accepted", dot: "#22C55E" }
+      case "pending":
+        return { bg: "#FEF3C7", text: "#92400E", label: "Pending", dot: "#F59E0B" }
+      default:
+        return { bg: "#FEE2E2", text: "#B91C1C", label: "Rejected", dot: "#EF4444" }
+    }
+  }
+
+  const openBoard = (project: ProjectItem) => {
+    if (!project.conversationId) {
+      return
+    }
+
+    router.push({
+      pathname: "/(root)/chat",
+      params: {
+        conversationId: project.conversationId,
+        otherDisplayName: project.client,
+        jobTitle: project.title,
+      },
+    })
+  }
+
+  const submitClientReview = async (project: ProjectItem) => {
+    const draft = reviewDrafts[project.id]
+    if (!draft?.rating) {
+      return
+    }
+
+    try {
+      setSubmittingReviewId(project.id)
+      const token = await getToken()
+      const response = await fetch(getApiUrl(`/api/applications/${project.id}/reviews`), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(draft),
+      })
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to save review")
+      }
+
+      await fetchProfileData()
+    } catch (error) {
+      console.error("Failed to save client review", error)
+    } finally {
+      setSubmittingReviewId(null)
+    }
+  }
+
+  const renderProject = (project: ProjectItem) => {
     const config = getStatusConfig(project.status)
+    const draft = reviewDrafts[project.id] || { rating: 5, comment: "" }
 
     return (
       <View
         key={project.id}
-        className="bg-white rounded-xl p-4 mb-2.5"
-        style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
+        className="mb-3 rounded-[24px] border border-slate-200 bg-white p-4"
       >
-        {/* Header row */}
-        <View className="flex-row justify-between items-center mb-2.5">
-          <Text className="text-sm font-medium text-gray-900 flex-1 mr-2.5" numberOfLines={2}>
-            {project.title}
-          </Text>
-          {/* Badge — bg & text colour are dynamic, structure is NativeWind */}
-          <View
-            className="flex-row items-center px-2 py-0.5 rounded-md"
-            style={{ backgroundColor: config.bg }}
-          >
-            <View
-              className="w-1.5 h-1.5 rounded-full mr-1.5"
-              style={{ backgroundColor: config.dot }}
-            />
-            <Text className="text-xs font-medium" style={{ color: config.text }}>
+        <View className="mb-3 flex-row items-start justify-between gap-3">
+          <View className="flex-1">
+            <Text className="text-base font-bold text-slate-950">{project.title}</Text>
+            <Text className="mt-1 text-sm text-slate-500">{project.client} · {project.category}</Text>
+          </View>
+          <View className="rounded-full px-3 py-1.5" style={{ backgroundColor: config.bg }}>
+            <Text className="text-xs font-bold" style={{ color: config.text }}>
               {config.label}
             </Text>
           </View>
         </View>
 
-        {/* Client + category */}
-        <Text className="text-xs text-gray-500 mb-3">
-          {project.client} · {project.category}
-        </Text>
+        <View className="mb-3 rounded-2xl bg-slate-50 p-4">
+          <Text className="text-xs font-bold uppercase tracking-[1px] text-slate-400">
+            Client rating
+          </Text>
+          <Text className="mt-2 text-2xl font-bold text-slate-950">
+            {project.clientReviewSummary.averageRating > 0
+              ? project.clientReviewSummary.averageRating.toFixed(1)
+              : "New"}
+          </Text>
+          <Text className="mt-1 text-xs text-slate-500">
+            {project.clientReviewSummary.reviewCount} review
+            {project.clientReviewSummary.reviewCount === 1 ? "" : "s"}
+          </Text>
+        </View>
 
-        {/* Quotation — left border accent, no filled box */}
-        {project.quotation && (
+        <View className="mb-3 flex-row gap-3">
           <View
-            className="pl-2.5 mb-2.5"
-            style={{ borderLeftWidth: 2, borderLeftColor: "#639922" }}
+            className="flex-1 rounded-2xl p-3"
+            style={{ borderLeftWidth: 3, borderLeftColor: "#2D4A6A", backgroundColor: "#F8FAFC" }}
           >
-            <Text
-              className="text-[10px] font-medium uppercase mb-0.5"
-              style={{ color: "#639922", letterSpacing: 0.4 }}
-            >
+            <Text className="text-xs font-bold uppercase tracking-[1px] text-slate-400">
               Quotation
             </Text>
-            <Text className="text-[13px] font-medium text-gray-900">
-              {project.quotation}
-            </Text>
+            <Text className="mt-2 text-sm font-semibold text-slate-900">{project.quotation}</Text>
           </View>
-        )}
+        </View>
 
-        {/* Conditions — plain inline text, no filled box */}
         {project.conditions ? (
-          <Text className="text-xs text-gray-500 mb-3 leading-[18px]">
-            Terms: {project.conditions}
-          </Text>
+          <Text className="mb-3 text-sm leading-6 text-slate-500">Terms: {project.conditions}</Text>
         ) : null}
 
-        {/* Footer */}
-        <View
-          className="flex-row justify-between items-center pt-2.5"
-          style={{ borderTopWidth: 0.5, borderTopColor: "#F3F4F6" }}
-        >
-          <Text className="text-[11px] text-gray-400">
-            Applied{" "}
-            {new Date(project.startDate).toLocaleDateString("en-US", {
+        <View className="mb-3 flex-row items-center justify-between">
+          <Text className="text-xs text-slate-400">
+            Applied {new Date(project.startDate).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
               year: "numeric",
             })}
           </Text>
-          <Text className="text-[13px] font-medium text-gray-900">{project.budget}</Text>
+          <Text className="text-sm font-semibold text-slate-900">{project.budget}</Text>
         </View>
+
+        {project.status === "accepted" ? (
+          <View className="mb-3 rounded-2xl bg-slate-50 p-4">
+            <Text className="text-sm font-bold text-slate-900">Rate this client</Text>
+            <Text className="mt-1 text-sm leading-6 text-slate-500">
+              Share how reliable the client was so other freelancers know what to expect.
+            </Text>
+            <View className="mt-3">
+              <StarPicker
+                rating={draft.rating}
+                onChange={(value) =>
+                  setReviewDrafts((current) => ({
+                    ...current,
+                    [project.id]: {
+                      ...draft,
+                      rating: value,
+                    },
+                  }))
+                }
+              />
+            </View>
+            <TextInput
+              value={draft.comment}
+              onChangeText={(value) =>
+                setReviewDrafts((current) => ({
+                  ...current,
+                  [project.id]: {
+                    ...draft,
+                    comment: value,
+                  },
+                }))
+              }
+              placeholder="Optional comment"
+              placeholderTextColor="#94A3B8"
+              multiline
+              className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900"
+              style={{ minHeight: 86, textAlignVertical: "top" }}
+            />
+            <View className="mt-3 flex-row gap-2">
+              {project.conversationId ? (
+                <TouchableOpacity onPress={() => openBoard(project)} className="rounded-full bg-[#2D4A6A] px-4 py-2.5">
+                  <Text className="text-xs font-bold text-white">Open board</Text>
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity
+                onPress={() => submitClientReview(project)}
+                className="rounded-full bg-slate-900 px-4 py-2.5"
+                disabled={submittingReviewId === project.id}
+              >
+                <Text className="text-xs font-bold text-white">
+                  {submittingReviewId === project.id ? "Saving..." : "Save review"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : project.conversationId ? (
+          <TouchableOpacity onPress={() => openBoard(project)} className="rounded-full bg-[#2D4A6A] px-4 py-2.5 self-start">
+            <Text className="text-xs font-bold text-white">Open board</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     )
   }
 
   const renderPersonalInfo = () => (
     <View className="px-4 pt-5">
-
-      {/* Full name */}
-      <View
-        className="bg-white rounded-xl p-4 mb-2.5"
-        style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
-      >
-        <View className="flex-row justify-between items-start">
-          <View className="flex-1">
-            <Text
-              className="text-[11px] font-medium text-gray-400 uppercase mb-1.5"
-              style={{ letterSpacing: 0.5 }}
-            >
-              Full name
-            </Text>
-            <Text className="text-sm font-medium text-gray-900">
-              {user?.fullName || "Please fill in your name"}
-            </Text>
+      {[
+        {
+          title: "Full name",
+          value: user?.fullName || "Please fill in your name",
+          icon: "pencil",
+        },
+        {
+          title: "About you",
+          value: "Write important information that clients might need to know",
+          icon: "pencil",
+        },
+        {
+          title: "Education and experience",
+          value: "Add the education you have and past work experience",
+          icon: "add",
+        },
+        {
+          title: "Address and region",
+          value: "We use your area to show nearby jobs without exposing your full address.",
+          icon: "add",
+        },
+      ].map((item) => (
+        <View
+          key={item.title}
+          className="mb-2.5 rounded-xl border border-slate-200 bg-white p-4"
+        >
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1">
+              <Text className="mb-1.5 text-[11px] font-medium uppercase text-slate-400">
+                {item.title}
+              </Text>
+              <Text className="text-[13px] leading-5 text-slate-600">{item.value}</Text>
+            </View>
+            <TouchableOpacity className="p-1">
+              <Ionicons name={item.icon as any} size={18} color="#94A3B8" />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity className="p-1">
-            <Ionicons name="pencil" size={16} color="#9CA3AF" />
-          </TouchableOpacity>
         </View>
-      </View>
-
-      {/* About you */}
-      <View
-        className="bg-white rounded-xl p-4 mb-2.5"
-        style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
-      >
-        <View className="flex-row justify-between items-start">
-          <View className="flex-1">
-            <Text
-              className="text-[11px] font-medium text-gray-400 uppercase mb-1.5"
-              style={{ letterSpacing: 0.5 }}
-            >
-              About you
-            </Text>
-            <Text className="text-[13px] text-gray-500 leading-5">
-              Write important information that clients might need to know
-            </Text>
-          </View>
-          <TouchableOpacity className="p-1">
-            <Ionicons name="pencil" size={16} color="#9CA3AF" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Education and experience */}
-      <View
-        className="bg-white rounded-xl p-4 mb-2.5"
-        style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
-      >
-        <View className="flex-row justify-between items-start">
-          <View className="flex-1">
-            <Text
-              className="text-[11px] font-medium text-gray-400 uppercase mb-1.5"
-              style={{ letterSpacing: 0.5 }}
-            >
-              Education and experience
-            </Text>
-            <Text className="text-[13px] text-gray-500 leading-5">
-              Add the education you have and past work experience
-            </Text>
-          </View>
-          <TouchableOpacity className="p-1">
-            <Ionicons name="add" size={18} color="#9CA3AF" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Address and region */}
-      <View
-        className="bg-white rounded-xl p-4 mb-2.5"
-        style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
-      >
-        <View className="flex-row justify-between items-start">
-          <View className="flex-1">
-            <Text
-              className="text-[11px] font-medium text-gray-400 uppercase mb-1.5"
-              style={{ letterSpacing: 0.5 }}
-            >
-              Address and region
-            </Text>
-            <Text className="text-[13px] text-gray-500 leading-5">
-              We do not share your address with clients, it is needed to show you jobs near you
-            </Text>
-          </View>
-          <TouchableOpacity className="p-1">
-            <Ionicons name="add" size={18} color="#9CA3AF" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
+      ))}
     </View>
   )
 
@@ -282,7 +400,7 @@ const ProfileScreen = () => {
       return (
         <View className="py-12 items-center">
           <ActivityIndicator size="large" color="#111827" />
-          <Text className="text-gray-400 mt-3.5 text-[13px]">
+          <Text className="mt-3.5 text-[13px] text-slate-400">
             Loading your applications...
           </Text>
         </View>
@@ -291,121 +409,128 @@ const ProfileScreen = () => {
 
     return (
       <View className="px-4 pt-5">
-
-        {/* Section label */}
-        <Text
-          className="text-[11px] font-medium text-gray-400 uppercase mb-4"
-          style={{ letterSpacing: 0.6 }}
-        >
-          My applications
-        </Text>
-
-        {/* Accepted */}
-        {acceptedProjects.length > 0 && (
+        {acceptedProjects.length > 0 ? (
           <View className="mb-5">
-            <View className="flex-row items-center mb-2.5">
-              <View className="w-1.5 h-1.5 rounded-full bg-green-700 mr-2" />
-              <Text className="text-[13px] font-medium text-gray-900">
-                Accepted · {acceptedProjects.length}
-              </Text>
-            </View>
+            <Text className="mb-3 text-[13px] font-medium text-slate-900">
+              Accepted · {acceptedProjects.length}
+            </Text>
             {acceptedProjects.map(renderProject)}
           </View>
-        )}
+        ) : null}
 
-        {/* Pending */}
-        {pendingProjects.length > 0 && (
+        {pendingProjects.length > 0 ? (
           <View className="mb-5">
-            <View className="flex-row items-center mb-2.5">
-              <View className="w-1.5 h-1.5 rounded-full bg-amber-600 mr-2" />
-              <Text className="text-[13px] font-medium text-gray-900">
-                Pending · {pendingProjects.length}
-              </Text>
-            </View>
+            <Text className="mb-3 text-[13px] font-medium text-slate-900">
+              Pending · {pendingProjects.length}
+            </Text>
             {pendingProjects.map(renderProject)}
           </View>
-        )}
+        ) : null}
 
-        {/* Rejected */}
-        {rejectedProjects.length > 0 && (
+        {rejectedProjects.length > 0 ? (
           <View className="mb-5">
-            <View className="flex-row items-center mb-2.5">
-              <View className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2" />
-              <Text className="text-[13px] font-medium text-gray-900">
-                Rejected · {rejectedProjects.length}
-              </Text>
-            </View>
+            <Text className="mb-3 text-[13px] font-medium text-slate-900">
+              Rejected · {rejectedProjects.length}
+            </Text>
             {rejectedProjects.map(renderProject)}
           </View>
-        )}
+        ) : null}
 
-        {/* Completed */}
-        {completedProjects.length > 0 && (
-          <View className="mb-5">
-            <View className="flex-row items-center mb-2.5">
-              <View className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-2" />
-              <Text className="text-[13px] font-medium text-gray-900">
-                Completed · {completedProjects.length}
-              </Text>
-            </View>
-            {completedProjects.map(renderProject)}
-          </View>
-        )}
-
-        {/* Empty state */}
-        {userProjects.length === 0 && (
-          <View
-            className="bg-white rounded-xl p-10 items-center"
-            style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
-          >
+        {projects.length === 0 ? (
+          <View className="rounded-xl border border-slate-200 bg-white p-10 items-center">
             <Ionicons name="briefcase-outline" size={36} color="#D1D5DB" />
-            <Text className="text-gray-700 text-sm font-medium mt-4">
-              No applications yet
-            </Text>
-            <Text className="text-gray-400 text-[13px] text-center mt-1.5 leading-5">
-              Start browsing available tasks to begin your freelancing journey!
+            <Text className="mt-4 text-sm font-medium text-slate-700">No applications yet</Text>
+            <Text className="mt-1.5 text-center text-[13px] leading-5 text-slate-400">
+              Start browsing available tasks to begin your freelancing journey.
             </Text>
           </View>
-        )}
-
+        ) : null}
       </View>
     )
   }
+
+  const renderReviews = () => (
+    <View className="px-4 pt-5">
+      <View className="mb-4 rounded-[24px] border border-slate-200 bg-white p-5">
+        <Text className="text-xs font-bold uppercase tracking-[1px] text-slate-400">Your rating</Text>
+        <Text className="mt-2 text-4xl font-bold text-slate-950">
+          {reviewSummary.averageRating > 0 ? reviewSummary.averageRating.toFixed(1) : "New"}
+        </Text>
+        <Text className="mt-2 text-sm text-slate-500">
+          {reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? "" : "s"}
+        </Text>
+      </View>
+
+      {receivedReviews.length === 0 ? (
+        <View className="rounded-[24px] border border-slate-200 bg-white p-5">
+          <Text className="text-sm text-slate-500">
+            You do not have any reviews yet. Completed accepted jobs will start building your rating here.
+          </Text>
+        </View>
+      ) : (
+        receivedReviews.map((review) => (
+          <View
+            key={review.id}
+            className="mb-3 rounded-[24px] border border-slate-200 bg-white p-4"
+          >
+            <View className="flex-row items-center justify-between">
+              <Text className="text-base font-bold text-slate-950">{review.reviewerName}</Text>
+              <View className="flex-row gap-1">
+                {Array.from({ length: 5 }, (_, index) => (
+                  <Ionicons
+                    key={index}
+                    name={index < review.rating ? "star" : "star-outline"}
+                    size={14}
+                    color={index < review.rating ? "#F59E0B" : "#CBD5E1"}
+                  />
+                ))}
+              </View>
+            </View>
+            {review.comment ? (
+              <Text className="mt-3 text-sm leading-6 text-slate-600">{review.comment}</Text>
+            ) : null}
+            <Text className="mt-3 text-xs text-slate-400">
+              {new Date(review.createdAt).toLocaleDateString()}
+            </Text>
+          </View>
+        ))
+      )}
+    </View>
+  )
 
   return (
     <SafeAreaView className="flex-1 bg-white">
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Verification Modal */}
       <Modal
         visible={showVerificationModal}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={() => setShowVerificationModal(false)}
       >
-        <View className="flex-1 bg-black/40 justify-center items-center px-6">
-          <View className="bg-white rounded-2xl p-6 w-full max-w-sm">
+        <View className="flex-1 items-center justify-center bg-black/40 px-6">
+          <View className="w-full max-w-sm rounded-2xl bg-white p-6">
             <TouchableOpacity
-              className="absolute top-4 right-4 z-10 p-1"
+              className="absolute right-4 top-4 z-10 p-1"
               onPress={() => setShowVerificationModal(false)}
             >
               <Ionicons name="close" size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
             <View className="items-center">
-              <Text className="text-base font-medium text-gray-900 mb-2.5 text-center">
+              <Text className="mb-2.5 text-base font-medium text-slate-900">
                 Verify your account
               </Text>
-              <Text className="text-[13px] text-gray-500 text-center mb-6 leading-5">
-                Clients choose specialists with a verified ID/Passport.{"\n"}It only takes a minute.
+              <Text className="mb-6 text-center text-[13px] leading-5 text-slate-500">
+                Clients choose specialists with a verified ID or Passport. It only takes a minute.
               </Text>
 
               <TouchableOpacity
-                className="bg-gray-900 rounded-[10px] px-6 py-3.5 w-full"
+                className="w-full rounded-[10px] bg-slate-900 px-6 py-3.5"
                 activeOpacity={0.85}
                 onPress={() => setShowVerificationModal(false)}
               >
-                <Text className="text-white font-medium text-center text-sm">
+                <Text className="text-center text-sm font-medium text-white">
                   Verify your account
                 </Text>
               </TouchableOpacity>
@@ -415,65 +540,55 @@ const ProfileScreen = () => {
       </Modal>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-
-        {/* Profile card */}
-        <View
-          className="bg-white mx-4 mt-4 rounded-2xl p-6"
-          style={{ borderWidth: 0.5, borderColor: "#E5E7EB" }}
-        >
-          <View className="items-center mb-5">
+        <View className="mx-4 mt-4 rounded-2xl border border-slate-200 bg-white p-6">
+          <View className="mb-5 items-center">
             <Image
-              source={{ uri: user?.imageUrl || "/diverse-user-avatars.png" }}
-              className="rounded-full mb-3"
+              source={user?.imageUrl ? { uri: user.imageUrl } : FALLBACK_PROFILE_IMAGE}
+              className="mb-3 rounded-full"
               style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 0.5, borderColor: "#E5E7EB" }}
             />
-            <Text className="text-lg font-semibold text-gray-900 mb-0.5">
+            <Text className="mb-0.5 text-lg font-semibold text-slate-900">
               {user?.fullName || "User"}
             </Text>
-            <Text className="text-[13px] text-gray-400">
+            <Text className="text-[13px] text-slate-400">
               {user?.primaryEmailAddress?.emailAddress}
             </Text>
           </View>
 
-          {/* Stats — contained metric tiles */}
-          <View
-            className="flex-row gap-2 pt-4"
-            style={{ borderTopWidth: 0.5, borderTopColor: "#F3F4F6" }}
-          >
+          <View className="flex-row gap-2 border-t border-slate-100 pt-4">
             {loading ? (
               <ActivityIndicator size="small" color="#111827" />
             ) : (
               <>
-                <View className="flex-1 bg-gray-50 rounded-[10px] p-3 items-center">
-                  <Text className="text-xl font-medium text-gray-900">{userProjects.length}</Text>
-                  <Text className="text-[11px] text-gray-400 mt-0.5">Applications</Text>
+                <View className="flex-1 rounded-[10px] bg-slate-50 p-3 items-center">
+                  <Text className="text-xl font-medium text-slate-900">{projects.length}</Text>
+                  <Text className="mt-0.5 text-[11px] text-slate-400">Applications</Text>
                 </View>
-                <View className="flex-1 bg-gray-50 rounded-[10px] p-3 items-center">
-                  <Text className="text-xl font-medium text-gray-900">{acceptedProjects.length}</Text>
-                  <Text className="text-[11px] text-gray-400 mt-0.5">Accepted</Text>
+                <View className="flex-1 rounded-[10px] bg-slate-50 p-3 items-center">
+                  <Text className="text-xl font-medium text-slate-900">
+                    {reviewSummary.averageRating > 0 ? reviewSummary.averageRating.toFixed(1) : "New"}
+                  </Text>
+                  <Text className="mt-0.5 text-[11px] text-slate-400">Rating</Text>
                 </View>
-                <View className="flex-1 bg-gray-50 rounded-[10px] p-3 items-center">
-                  <Text className="text-xl font-medium text-gray-900">{pendingProjects.length}</Text>
-                  <Text className="text-[11px] text-gray-400 mt-0.5">Pending</Text>
+                <View className="flex-1 rounded-[10px] bg-slate-50 p-3 items-center">
+                  <Text className="text-xl font-medium text-slate-900">{acceptedProjects.length}</Text>
+                  <Text className="mt-0.5 text-[11px] text-slate-400">Accepted</Text>
                 </View>
               </>
             )}
           </View>
         </View>
 
-        {/* Tab navigation — flat, no elevation */}
-        <View
-          className="mx-4 mt-4 flex-row"
-          style={{ borderBottomWidth: 0.5, borderBottomColor: "#E5E7EB" }}
-        >
+        <View className="mx-4 mt-4 flex-row" style={{ borderBottomWidth: 0.5, borderBottomColor: "#E5E7EB" }}>
           {[
             { key: "projects", label: "Projects" },
+            { key: "reviews", label: "Reviews" },
             { key: "personal", label: "Personal info" },
-            { key: "wallet",   label: "Wallet" },
+            { key: "wallet", label: "Wallet" },
           ].map((tab) => (
             <TouchableOpacity
               key={tab.key}
-              className="flex-1 py-3 items-center"
+              className="flex-1 items-center py-3"
               style={{
                 borderBottomWidth: activeTab === tab.key ? 1.5 : 0,
                 borderBottomColor: activeTab === tab.key ? "#111827" : "transparent",
@@ -494,18 +609,15 @@ const ProfileScreen = () => {
           ))}
         </View>
 
-        {/* Tab content */}
-        {activeTab === "projects" ? (
-          renderProjects()
-        ) : activeTab === "personal" ? (
-          renderPersonalInfo()
-        ) : (
-          <WalletComponent />
-        )}
+        {activeTab === "projects"
+          ? renderProjects()
+          : activeTab === "reviews"
+          ? renderReviews()
+          : activeTab === "personal"
+          ? renderPersonalInfo()
+          : <WalletComponent />}
 
-        {/* Bottom padding */}
         <View className="h-8" />
-
       </ScrollView>
     </SafeAreaView>
   )

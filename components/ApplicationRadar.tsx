@@ -306,7 +306,7 @@ export function ApplicationRadar({
                       >
                         <ChatBubbleLeftRightIcon size={14} color="#FFFFFF" />
                         <Text style={{ fontFamily: "Quicksand-Bold", fontSize: 13, color: "#FFFFFF" }}>
-                          Open chat
+                          Open board
                         </Text>
                       </TouchableOpacity>
                     ) : null}
