@@ -4,6 +4,7 @@ import { useAuth, useUser } from "@clerk/clerk-expo";
 import { io, Socket } from "socket.io-client";
 import Toast from "react-native-toast-message";
 import { API_BASE_URL, getApiUrl } from "@/lib/fetch";
+import { waitForClerkToken } from "@/lib/session";
 
 export interface Notification {
   id: number;
@@ -113,7 +114,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
     try {
       setLoading(true);
-      const token = await getTokenRef.current();
+      const token = await waitForClerkToken(getTokenRef.current);
       const response = await fetch(getApiUrl(`/api/notifications/by-clerk/${user.id}`), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -184,7 +185,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     let socket: Socket | null = null;
 
     (async () => {
-      const token = await getTokenRef.current();
+      const token = await waitForClerkToken(getTokenRef.current);
       if (!token || cancelled) {
         return;
       }
@@ -248,7 +249,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     );
 
     try {
-      const token = await getTokenRef.current();
+      const token = await waitForClerkToken(getTokenRef.current);
       const response = await fetch(getApiUrl(`/api/notifications/${notificationId}/read`), {
         method: "PATCH",
         headers: {
@@ -275,7 +276,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     setNotifications((current) => current.map((notification) => ({ ...notification, read: true })));
 
     try {
-      const token = await getTokenRef.current();
+      const token = await waitForClerkToken(getTokenRef.current);
       const response = await fetch(getApiUrl(`/api/notifications/by-clerk/${clerkId}/read`), {
         method: "PATCH",
         headers: {

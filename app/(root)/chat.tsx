@@ -11,9 +11,11 @@ import {
 } from "react-native";
 import { useAuth } from "@clerk/clerk-expo";
 import { router, useLocalSearchParams } from "expo-router";
-import { ConversationChatScreen } from "@/components/messaging/ConversationChatScreen";
+import { ConversationChatScreen, getInitials } from "@/components/messaging/ConversationChatScreen";
 import { useMessagingConversations } from "@/hooks/useMessagingConversations";
 import { API_BASE_URL } from "@/lib/fetch";
+import { COLORS, RADIUS } from "@/constants/theme";
+import { ChatBubbleLeftRightIcon } from "react-native-heroicons/outline";
 
 type ConversationRow = {
   conversationId: string;
@@ -139,17 +141,25 @@ export default function ChatUsersScreen() {
           keyExtractor={(item) => item.conversationId}
           renderItem={({ item }) => (
             <Pressable style={styles.row} onPress={() => openConversation(item)}>
-              <Text style={styles.name}>{item.otherUser?.displayName || "Coordination board"}</Text>
-              <Text style={styles.sub}>{item.jobTitle || "Open board"}</Text>
-              <Text style={styles.time}>
-                {item.lastMessageAt
-                  ? new Date(item.lastMessageAt).toLocaleDateString()
-                  : "No status yet"}
-              </Text>
+              <View style={styles.rowAvatar}>
+                <Text style={styles.rowAvatarText}>{getInitials(item.otherUser?.displayName)}</Text>
+              </View>
+              <View style={styles.rowContent}>
+                <Text style={styles.name}>{item.otherUser?.displayName || "Coordination board"}</Text>
+                <Text style={styles.sub}>{item.jobTitle || "Open board"}</Text>
+                <Text style={styles.time}>
+                  {item.lastMessageAt
+                    ? new Date(item.lastMessageAt).toLocaleDateString()
+                    : "No status yet"}
+                </Text>
+              </View>
             </Pressable>
           )}
           ListEmptyComponent={
             <View style={styles.emptyCard}>
+              <View style={styles.emptyIconBadge}>
+                <ChatBubbleLeftRightIcon size={26} color={COLORS.navy} />
+              </View>
               <Text style={styles.emptyTitle}>No boards yet</Text>
               <Text style={styles.emptyText}>
                 Apply to a job and your coordination board will appear here.
@@ -170,13 +180,13 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     paddingTop: 48,
-    backgroundColor: "#F2F5F7",
+    backgroundColor: COLORS.background,
   },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F2F5F7",
+    backgroundColor: COLORS.background,
   },
   title: {
     fontSize: 24,
@@ -195,8 +205,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   backButton: {
-    backgroundColor: "#2D4A6A",
-    borderRadius: 12,
+    backgroundColor: COLORS.navy,
+    borderRadius: RADIUS.sm,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
@@ -207,20 +217,39 @@ const styles = StyleSheet.create({
   search: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#D8E8ED",
-    borderRadius: 14,
+    borderColor: COLORS.borderSoft,
+    borderRadius: RADIUS.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 12,
     color: "#1A1C1F",
   },
   row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: "#D8E8ED",
+    borderColor: COLORS.borderSoft,
     padding: 16,
     marginBottom: 10,
+  },
+  rowAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.navySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowAvatarText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.navy,
+  },
+  rowContent: {
+    flex: 1,
   },
   name: {
     fontSize: 16,
@@ -244,11 +273,20 @@ const styles = StyleSheet.create({
   emptyCard: {
     marginTop: 24,
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: RADIUS.xl,
     borderWidth: 1,
-    borderColor: "#D8E8ED",
+    borderColor: COLORS.borderSoft,
     padding: 20,
     alignItems: "center",
+  },
+  emptyIconBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.navySoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
   },
   emptyTitle: {
     fontSize: 18,
@@ -264,8 +302,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   refreshButton: {
-    backgroundColor: "#2D4A6A",
-    borderRadius: 12,
+    backgroundColor: COLORS.navy,
+    borderRadius: RADIUS.sm,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },

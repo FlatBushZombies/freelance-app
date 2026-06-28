@@ -131,7 +131,7 @@ const Onboarding = () => {
   if (!isLoaded || checkingStatus) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#111827" />
+        <ActivityIndicator size="large" color="#2D4A6A" />
         <Text className="font-quicksand-semibold text-gray-500 text-sm mt-4">
           Preparing your profile...
         </Text>
@@ -206,7 +206,7 @@ const Onboarding = () => {
               {/* Full Name */}
               <View className="mb-7">
                 <View className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-gray-900">
+                  <View className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-[#2D4A6A]">
                     <UserIcon size={18} color="#FFFFFF" />
                   </View>
                   <Text className="font-quicksand-semibold text-gray-900 text-base">
@@ -225,7 +225,7 @@ const Onboarding = () => {
               {/* Skills */}
               <View className="mb-7">
                 <View className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-gray-900">
+                  <View className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-[#2D4A6A]">
                     <BoltIcon size={18} color="#FFFFFF" />
                   </View>
                   <Text className="font-quicksand-semibold text-gray-900 text-base">
@@ -248,7 +248,7 @@ const Onboarding = () => {
               {/* Experience Level */}
               <View className="mb-7">
                 <View className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-gray-900">
+                  <View className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-[#2D4A6A]">
                     <ChartBarIcon size={18} color="#FFFFFF" />
                   </View>
                   <Text className="font-quicksand-semibold text-gray-900 text-base">
@@ -269,7 +269,7 @@ const Onboarding = () => {
                         activeOpacity={0.7}
                         className={`rounded-2xl px-5 py-4 border-2 ${
                           active
-                            ? "bg-gray-900 border-gray-900"
+                            ? "bg-[#2D4A6A] border-[#2D4A6A]"
                             : "bg-gray-50 border-gray-100"
                         }`}
                       >
@@ -292,7 +292,7 @@ const Onboarding = () => {
                           </View>
                           {active && (
                             <View className="w-7 h-7 rounded-full items-center justify-center bg-white">
-                              <CheckIcon size={16} color="#111827" />
+                              <CheckIcon size={16} color="#2D4A6A" />
                             </View>
                           )}
                         </View>
@@ -305,7 +305,7 @@ const Onboarding = () => {
               {/* Hourly Rate */}
               <View>
                 <View className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-gray-900">
+                  <View className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-[#2D4A6A]">
                     <CurrencyDollarIcon size={18} color="#FFFFFF" />
                   </View>
                   <Text className="font-quicksand-semibold text-gray-900 text-base">
@@ -363,8 +363,8 @@ const Onboarding = () => {
               activeOpacity={0.85}
               className="rounded-2xl py-5 items-center justify-center flex-row"
               style={{
-                backgroundColor: !isFormValid() || loading ? "#D1D5DB" : "#111827",
-                shadowColor: "#111827",
+                backgroundColor: !isFormValid() || loading ? "#D1D5DB" : "#2D4A6A",
+                shadowColor: "#2D4A6A",
                 shadowOffset: { width: 0, height: 12 },
                 shadowOpacity: !isFormValid() || loading ? 0 : 0.25,
                 shadowRadius: 20,
@@ -394,7 +394,7 @@ const Onboarding = () => {
                 }}
               >
                 <View className="w-16 h-16 rounded-full bg-gray-100 items-center justify-center mb-5">
-                  <ActivityIndicator size="large" color="#111827" />
+                  <ActivityIndicator size="large" color="#2D4A6A" />
                 </View>
                 <Text className="font-quicksand-bold text-gray-900 text-lg mb-1">
                   Creating your profile...

@@ -399,7 +399,7 @@ const ProfileScreen = () => {
     if (loading) {
       return (
         <View className="py-12 items-center">
-          <ActivityIndicator size="large" color="#111827" />
+          <ActivityIndicator size="large" color="#2D4A6A" />
           <Text className="mt-3.5 text-[13px] text-slate-400">
             Loading your applications...
           </Text>
@@ -557,7 +557,7 @@ const ProfileScreen = () => {
 
           <View className="flex-row gap-2 border-t border-slate-100 pt-4">
             {loading ? (
-              <ActivityIndicator size="small" color="#111827" />
+              <ActivityIndicator size="small" color="#2D4A6A" />
             ) : (
               <>
                 <View className="flex-1 rounded-[10px] bg-slate-50 p-3 items-center">
@@ -591,7 +591,7 @@ const ProfileScreen = () => {
               className="flex-1 items-center py-3"
               style={{
                 borderBottomWidth: activeTab === tab.key ? 1.5 : 0,
-                borderBottomColor: activeTab === tab.key ? "#111827" : "transparent",
+                borderBottomColor: activeTab === tab.key ? "#2D4A6A" : "transparent",
                 marginBottom: -0.5,
               }}
               onPress={() => setActiveTab(tab.key)}
@@ -600,7 +600,7 @@ const ProfileScreen = () => {
                 className="text-[13px]"
                 style={{
                   fontWeight: activeTab === tab.key ? "500" : "400",
-                  color: activeTab === tab.key ? "#111827" : "#9CA3AF",
+                  color: activeTab === tab.key ? "#2D4A6A" : "#9CA3AF",
                 }}
               >
                 {tab.label}

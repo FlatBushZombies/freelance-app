@@ -3,11 +3,13 @@ import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Alert, Image, ScrollView, Text, View } from "react-native";
 import { ReactNativeModal } from "react-native-modal";
+import { CheckCircleIcon } from "react-native-heroicons/solid";
 
 import CustomButton from "@/components/CustomButton";
 import InputField from "@/components/InputField";
 import OAuth from "@/components/OAuth";
 import { icons, IMAGES } from "@/constants";
+import { COLORS } from "@/constants/theme";
 import { fetchAPI } from "@/lib/fetch";
 
 const SignUp = () => {
@@ -169,14 +171,32 @@ const SignUp = () => {
           </View>
         </ReactNativeModal>
         <ReactNativeModal isVisible={showSuccessModal}>
-          <View className="bg-white px-7 py-9 rounded-2xl min-h-[300px]">
-            <Text className="text-base text-gray-400 font-Jakarta text-center mt-2">
-              You have successfully verified your account.
+          <View
+            className="bg-white px-7 py-9 rounded-[28px] items-center"
+            style={{
+              shadowColor: "#0F172A",
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.12,
+              shadowRadius: 24,
+              elevation: 8,
+            }}
+          >
+            <View
+              className="w-16 h-16 rounded-full items-center justify-center mb-5"
+              style={{ backgroundColor: COLORS.successSoft }}
+            >
+              <CheckCircleIcon size={36} color={COLORS.success} />
+            </View>
+            <Text className="font-quicksand-bold text-xl text-gray-900 text-center mb-2">
+              You&apos;re verified
+            </Text>
+            <Text className="text-base text-gray-500 font-quicksand text-center leading-6">
+              Your account is confirmed. Let&apos;s set up your profile so clients can find you.
             </Text>
             <CustomButton
               title="Continue to Profile Setup"
               onPress={() => router.replace("/(auth)/onboarding")}
-              className="mt-5"
+              className="mt-6"
             />
           </View>
         </ReactNativeModal>

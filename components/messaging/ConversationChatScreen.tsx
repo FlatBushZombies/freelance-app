@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { useAuth } from "@clerk/clerk-expo";
 import { getApiUrl } from "@/lib/fetch";
+import { waitForClerkToken } from "@/lib/session";
+import { COLORS, RADIUS } from "@/constants/theme";
 
 const FREELANCER_TAGS = [
   { kind: "available-now", label: "Available now" },
@@ -39,6 +41,28 @@ type ParsedCard = {
   label: string;
   note: string | null;
 };
+
+export function getInitials(name?: string) {
+  const trimmed = (name || "").trim();
+  if (!trimmed) {
+    return "?";
+  }
+
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function buildCardText(kind: string, label: string, note: string) {
+  return `QH_CARD::${JSON.stringify({
+    kind: String(kind || "update"),
+    label: String(label || "").trim(),
+    note: note.trim() || null,
+  })}`;
+}
 
 function parseCard(text: string): ParsedCard | null {
   const normalized = String(text || "").trim();
@@ -109,9 +133,9 @@ export function ConversationChatScreen({
     }
 
     try {
-      const token = await getToken();
+      const token = await waitForClerkToken(getToken);
       if (!token) {
-        setError("Sign in to view coordination updates.");
+        setError(null);
         return;
       }
 
@@ -124,6 +148,11 @@ export function ConversationChatScreen({
         }
       );
       const data = await response.json();
+
+      if (response.status === 401) {
+        setError(null);
+        return;
+      }
 
       if (!response.ok || !data.success) {
         throw new Error(data.message || "Failed to load updates");
@@ -167,9 +196,9 @@ export function ConversationChatScreen({
 
     try {
       setSending(true);
-      const token = await getToken();
+      const token = await waitForClerkToken(getToken);
       if (!token) {
-        throw new Error("Sign in to send updates");
+        throw new Error("Your session is still loading. Please try again.");
       }
 
       const response = await fetch(
@@ -181,6 +210,7 @@ export function ConversationChatScreen({
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
+            text: buildCardText(activeTag.kind, activeTag.label, note),
             tag: activeTag.kind,
             label: activeTag.label,
             note,
@@ -188,6 +218,10 @@ export function ConversationChatScreen({
         }
       );
       const data = await response.json();
+
+      if (response.status === 401) {
+        throw new Error("Your session expired. Please reopen the board.");
+      }
 
       if (!response.ok || !data.success) {
         throw new Error(data.message || "Failed to send update");
@@ -229,13 +263,30 @@ export function ConversationChatScreen({
           const isMine = item.senderId === clerkUserId;
 
           return (
-            <View style={[styles.messageCard, isMine ? styles.mine : styles.other]}>
-              <Text style={styles.meta}>
-                {isMine ? "You" : otherDisplayName || item.senderName || "Other user"} ·{" "}
-                {new Date(item.createdAt).toLocaleString()}
-              </Text>
-              <Text style={styles.messageLabel}>{card?.label || "Status update"}</Text>
-              {card?.note ? <Text style={styles.messageNote}>{card.note}</Text> : null}
+            <View
+              style={[styles.messageRow, isMine ? styles.messageRowMine : styles.messageRowOther]}
+            >
+              {!isMine ? (
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {getInitials(otherDisplayName || item.senderName)}
+                  </Text>
+                </View>
+              ) : null}
+              <View style={[styles.messageCard, isMine ? styles.mine : styles.other]}>
+                <Text style={[styles.meta, isMine ? styles.metaMine : null]}>
+                  {isMine ? "You" : otherDisplayName || item.senderName || "Other user"} ·{" "}
+                  {new Date(item.createdAt).toLocaleString()}
+                </Text>
+                <Text style={[styles.messageLabel, isMine ? styles.messageLabelMine : null]}>
+                  {card?.label || "Status update"}
+                </Text>
+                {card?.note ? (
+                  <Text style={[styles.messageNote, isMine ? styles.messageNoteMine : null]}>
+                    {card.note}
+                  </Text>
+                ) : null}
+              </View>
             </View>
           );
         }}
@@ -306,10 +357,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   nextActionCard: {
-    backgroundColor: "#ECFEFF",
+    backgroundColor: COLORS.navySoft,
     borderWidth: 1,
-    borderColor: "#A5F3FC",
-    borderRadius: 18,
+    borderColor: COLORS.borderSoft,
+    borderRadius: RADIUS.lg,
     padding: 16,
     marginBottom: 12,
   },
@@ -317,7 +368,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
-    color: "#0F766E",
+    color: COLORS.navy,
     marginBottom: 6,
   },
   nextActionText: {
@@ -338,35 +389,69 @@ const styles = StyleSheet.create({
   timeline: {
     paddingBottom: 12,
   },
-  messageCard: {
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
+  messageRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
     marginBottom: 10,
   },
+  messageRowMine: {
+    justifyContent: "flex-end",
+  },
+  messageRowOther: {
+    justifyContent: "flex-start",
+  },
+  avatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.navySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.navy,
+  },
+  messageCard: {
+    maxWidth: "78%",
+    borderRadius: RADIUS.lg,
+    padding: 14,
+    borderWidth: 1,
+  },
   mine: {
-    backgroundColor: "#E0F2FE",
-    borderColor: "#BAE6FD",
+    backgroundColor: COLORS.navy,
+    borderColor: COLORS.navy,
   },
   other: {
     backgroundColor: "#FFFFFF",
-    borderColor: "#E2E8F0",
+    borderColor: COLORS.border,
   },
   meta: {
     fontSize: 11,
     color: "#64748B",
     marginBottom: 6,
   },
+  metaMine: {
+    color: "rgba(255,255,255,0.75)",
+  },
   messageLabel: {
     fontSize: 16,
     fontWeight: "700",
     color: "#0F172A",
+  },
+  messageLabelMine: {
+    color: "#FFFFFF",
   },
   messageNote: {
     marginTop: 6,
     fontSize: 13,
     lineHeight: 18,
     color: "#475569",
+  },
+  messageNoteMine: {
+    color: "rgba(255,255,255,0.85)",
   },
   empty: {
     textAlign: "center",
@@ -381,13 +466,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tagChip: {
-    backgroundColor: "#E2E8F0",
-    borderRadius: 999,
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: RADIUS.pill,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   tagChipActive: {
-    backgroundColor: "#CFFAFE",
+    backgroundColor: COLORS.navy,
   },
   tagChipText: {
     color: "#334155",
@@ -395,13 +480,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   tagChipTextActive: {
-    color: "#0F766E",
+    color: "#FFFFFF",
   },
   composer: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 18,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.lg,
     padding: 14,
   },
   composerLabel: {
@@ -422,8 +507,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sendButton: {
-    backgroundColor: "#0F766E",
-    borderRadius: 14,
+    backgroundColor: COLORS.navy,
+    borderRadius: RADIUS.md,
     paddingVertical: 12,
     alignItems: "center",
   },

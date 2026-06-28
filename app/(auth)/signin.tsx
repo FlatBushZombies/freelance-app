@@ -67,12 +67,12 @@ const SignIn = () => {
         <View className="w-full h-[280px] bg-gray-50 justify-end pb-8 px-7 rounded-b-[32px]">
 
           {/* Accent bar */}
-          <View className="absolute top-0 left-0 right-0 h-[3px] bg-[#2D3F50] rounded-b-sm" />
+          <View className="absolute top-0 left-0 right-0 h-[3px] bg-[#2D4A6A] rounded-b-sm" />
 
           {/* Welcome label */}
           <View className="flex-row items-center mb-3">
             <View className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2.5" />
-            <Text className="font-quicksand-semibold text-[#2D3F50] text-[13px] tracking-[2px] uppercase">
+            <Text className="font-quicksand-semibold text-[#2D4A6A] text-[13px] tracking-[2px] uppercase">
               Register
             </Text>
           </View>

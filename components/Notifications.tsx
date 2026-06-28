@@ -13,6 +13,7 @@ import {
 } from "react-native"
 import { BellAlertIcon, BellIcon, XMarkIcon } from "react-native-heroicons/outline"
 import { useNotifications } from "@/contexts/NotificationsContext"
+import { COLORS } from "@/constants/theme"
 
 interface NotificationBellProps {
   userId: string
@@ -185,7 +186,7 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
                 width: 8,
                 height: 8,
                 borderRadius: 4,
-                backgroundColor: "#3B82F6",
+                backgroundColor: COLORS.navy,
                 marginLeft: 8,
                 marginTop: 6,
               }}
@@ -259,14 +260,14 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
 
             {loading && notifications.length === 0 ? (
               <View className="flex-1 items-center justify-center">
-                <ActivityIndicator size="large" color="#3B82F6" />
+                <ActivityIndicator size="large" color={COLORS.navy} />
                 <Text style={{ color: "#6B7280", marginTop: 12 }}>Loading notifications...</Text>
               </View>
             ) : notifications.length === 0 ? (
               <View className="flex-1 items-center justify-center px-6">
                 <View
                   style={{
-                    backgroundColor: "#EEF2FF",
+                    backgroundColor: COLORS.navySoft,
                     width: 96,
                     height: 96,
                     borderRadius: 28,
@@ -275,7 +276,7 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
                     marginBottom: 24,
                   }}
                 >
-                  <BellAlertIcon size={42} color="#4F46E5" />
+                  <BellAlertIcon size={42} color={COLORS.navy} />
                 </View>
                 <Text style={{ fontSize: 20, fontWeight: "700", color: "#111827", marginBottom: 8, textAlign: "center" }}>
                   No notifications yet
@@ -292,7 +293,7 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingTop: 16, paddingBottom: 24 }}
                 refreshControl={
-                  <RefreshControl refreshing={loading} onRefresh={refreshNotifications} colors={["#3B82F6"]} />
+                  <RefreshControl refreshing={loading} onRefresh={refreshNotifications} colors={[COLORS.navy]} />
                 }
               />
             )}

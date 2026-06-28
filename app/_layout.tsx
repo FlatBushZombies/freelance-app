@@ -7,16 +7,17 @@ import { ClerkProvider } from "@clerk/clerk-expo";
 
 import "./globals.css";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
+import { toastConfig } from "@/components/Toast";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 export default function RootLayout() {
   const [fontsLoaded, error] = useFonts({
     "Quicksand-Bold": require("../assets/fonts/Quicksand-Bold.ttf"),
-    "QuickSand-Medium": require("../assets/fonts/Quicksand-Medium.ttf"),
-    "QuickSand-Regular": require("../assets/fonts/Quicksand-Regular.ttf"),
-    "QuickSand-SemiBold": require("../assets/fonts/Quicksand-SemiBold.ttf"),
-    "QuickSand-Light": require("../assets/fonts/Quicksand-Light.ttf"),
+    "Quicksand-Medium": require("../assets/fonts/Quicksand-Medium.ttf"),
+    "Quicksand-Regular": require("../assets/fonts/Quicksand-Regular.ttf"),
+    "Quicksand-SemiBold": require("../assets/fonts/Quicksand-SemiBold.ttf"),
+    "Quicksand-Light": require("../assets/fonts/Quicksand-Light.ttf"),
   });
 
   useEffect(() => {
@@ -28,7 +29,7 @@ export default function RootLayout() {
     <ClerkProvider publishableKey={publishableKey}>
       <NotificationsProvider>
         <Stack screenOptions={{ headerShown: false }} />
-        <Toast />
+        <Toast config={toastConfig} />
       </NotificationsProvider>
     </ClerkProvider>
   );

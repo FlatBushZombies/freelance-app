@@ -16,9 +16,10 @@ import {
   Squares2X2Icon,
 } from "react-native-heroicons/outline"
 import { CheckBadgeIcon } from "react-native-heroicons/solid"
+import { COLORS } from "@/constants/theme"
 
 const C = {
-  forest:   "#2D4A6A",
+  forest:   COLORS.navy,
   fern:     "#52839B",
   mint:     "#D8E8ED",
   leaf:     "#74A0B9",

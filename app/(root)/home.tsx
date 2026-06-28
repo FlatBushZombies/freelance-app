@@ -512,7 +512,7 @@ const Home = () => {
           ) : null}
         </View>
 
-        <View className="mb-4 rounded-[32px] bg-[#24384D] px-5 py-5">
+        <View className="mb-4 rounded-[32px] bg-[#2D4A6A] px-5 py-5">
           <Text className="text-xs font-semibold uppercase tracking-[1px] text-[#B8C9D4]">
             Your lane
           </Text>

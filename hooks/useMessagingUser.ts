@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { waitForClerkToken } from "@/lib/session";
 
 export type ChatUser = {
   clerkId: string;
@@ -22,9 +23,9 @@ export function useMessagingUsers({ apiUrl, getToken }: Options) {
     setLoading(true);
     setError(null);
     try {
-      const token = await getToken();
+      const token = await waitForClerkToken(getToken);
       if (!token) {
-        setError('Not signed in');
+        setError(null);
         return;
       }
       const base = apiUrl.replace(/\/$/, '');

@@ -62,7 +62,7 @@ export default function Index() {
   if (!isLoaded) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#6B8FAF" />
+        <ActivityIndicator size="large" color="#2D4A6A" />
       </View>
     )
   }
@@ -70,7 +70,7 @@ export default function Index() {
   if (isSignedIn) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#6B8FAF" />
+        <ActivityIndicator size="large" color="#2D4A6A" />
         <Text className="font-quicksand-medium text-gray-400 text-sm mt-4 tracking-[0.5px]">
           Redirecting...
         </Text>
@@ -82,7 +82,7 @@ export default function Index() {
     <View className="flex-1 bg-white">
 
       {/* Subtle top accent */}
-      <View className="h-[3px] bg-[#6B8FAF] rounded-b-sm" />
+      <View className="h-[3px] bg-[#2D4A6A] rounded-b-sm" />
 
       {/* Content */}
       <View className="flex-1 px-8 pt-[60px] pb-10">
@@ -95,7 +95,7 @@ export default function Index() {
             <View
               style={{
                 borderRadius: 28,
-                shadowColor: "#6B8FAF",
+                shadowColor: "#2D4A6A",
                 shadowOffset: { width: 0, height: 16 },
                 shadowOpacity: 0.2,
                 shadowRadius: 32,
@@ -110,13 +110,13 @@ export default function Index() {
             </View>
 
             {/* Brand Name */}
-            <Text className="font-quicksand-semibold text-[#6B8FAF] text-sm mt-5 tracking-[4px] uppercase">
+            <Text className="font-quicksand-semibold text-[#2D4A6A] text-sm mt-5 tracking-[4px] uppercase">
               QuickHands
             </Text>
           </View>
 
           {/* Decorative divider */}
-          <View className="w-10 h-0.5 bg-[#6B8FAF] rounded-sm mb-8" />
+          <View className="w-10 h-0.5 bg-[#2D4A6A] rounded-sm mb-8" />
 
           {/* Title */}
           <Text className="font-quicksand-bold text-[36px] text-gray-900 text-center leading-[44px] px-2 tracking-[-0.5px]">
@@ -175,7 +175,7 @@ export default function Index() {
 
           {/* Trust Indicator */}
           <View className="flex-row items-center mt-7 bg-gray-50 px-4 py-2 rounded-full">
-            <View className="w-1.5 h-1.5 rounded-full bg-[#6B8FAF] mr-2" />
+            <View className="w-1.5 h-1.5 rounded-full bg-[#2D4A6A] mr-2" />
             <Text className="font-quicksand-medium text-gray-400 text-xs tracking-[0.5px]">
               Early access for specialists
             </Text>

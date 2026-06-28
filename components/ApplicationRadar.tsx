@@ -12,6 +12,7 @@ import {
   TagIcon,
 } from "react-native-heroicons/outline"
 import { CheckBadgeIcon as CheckBadgeSolid } from "react-native-heroicons/solid"
+import { COLORS } from "@/constants/theme"
 
 export interface ApplicationRadarItem {
   id: number
@@ -94,7 +95,7 @@ export function ApplicationRadar({
       <View className="flex-row items-center justify-between mb-3.5">
         <View className="flex-1">
           <View className="flex-row items-center gap-2 mb-0.5">
-            <SignalIcon size={16} color="#2D4A6A" />
+            <SignalIcon size={16} color={COLORS.navy} />
             <Text
               style={{
                 fontFamily: "Quicksand-Bold",
@@ -123,7 +124,7 @@ export function ApplicationRadar({
           className="px-3 py-1 rounded-full"
           style={{ backgroundColor: "#D8E8ED" }}
         >
-          <Text style={{ fontFamily: "Quicksand-Bold", fontSize: 12, color: "#2D4A6A" }}>
+          <Text style={{ fontFamily: "Quicksand-Bold", fontSize: 12, color: COLORS.navy }}>
             {applications.length}
           </Text>
         </View>
@@ -220,9 +221,9 @@ export function ApplicationRadar({
                   >
                     {/* Score row */}
                     <View className="flex-row items-center gap-1.5 mb-2">
-                      <StarIcon size={13} color="#2D4A6A" />
+                      <StarIcon size={13} color={COLORS.navy} />
                       <Text
-                        style={{ fontFamily: "Quicksand-Bold", fontSize: 12, color: "#2D4A6A" }}
+                        style={{ fontFamily: "Quicksand-Bold", fontSize: 12, color: COLORS.navy }}
                       >
                         Signal score {application.applicationSpotlight.score}
                       </Text>
@@ -302,7 +303,7 @@ export function ApplicationRadar({
                       <TouchableOpacity
                         onPress={() => onOpenChat(application)}
                         className="flex-1 flex-row items-center justify-center gap-1.5 py-3 rounded-xl"
-                        style={{ backgroundColor: "#2D4A6A" }}
+                        style={{ backgroundColor: COLORS.navy }}
                       >
                         <ChatBubbleLeftRightIcon size={14} color="#FFFFFF" />
                         <Text style={{ fontFamily: "Quicksand-Bold", fontSize: 13, color: "#FFFFFF" }}>
