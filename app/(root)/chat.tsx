@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -15,7 +16,8 @@ import { ConversationChatScreen, getInitials } from "@/components/messaging/Conv
 import { useMessagingConversations } from "@/hooks/useMessagingConversations";
 import { API_BASE_URL } from "@/lib/fetch";
 import { COLORS, RADIUS } from "@/constants/theme";
-import { ChatBubbleLeftRightIcon } from "react-native-heroicons/outline";
+import { Search, PenSquare, ChevronLeft } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type ConversationRow = {
   conversationId: string;
@@ -28,8 +30,92 @@ type ConversationRow = {
   } | null;
 };
 
+/* ─── Team Quickhands pinned welcome item ─── */
+const TEAM_QH_ITEM = {
+  conversationId: "__team_qh__",
+  jobTitle: "Welcome to Quickhands",
+  lastMessageText: "Welcome to Quickhands Pro! Apply to jobs to get started.",
+  lastMessageAt: new Date().toISOString(),
+  otherUser: {
+    clerkId: "__team_qh__",
+    displayName: "Team Quickhands",
+  },
+} as ConversationRow;
+
+const formatTime = (iso: string | null) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
+  if (diffDays === 0)
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (diffDays < 7)
+    return d.toLocaleDateString([], { weekday: "short" });
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+};
+
+/* ─── Conversation row ─── */
+const ConvoRow = ({
+  item,
+  onPress,
+  isPinned = false,
+}: {
+  item: ConversationRow;
+  onPress: () => void;
+  isPinned?: boolean;
+}) => {
+  const initials = getInitials(item.otherUser?.displayName);
+
+  return (
+    <Pressable style={styles.row} onPress={onPress} android_ripple={null}>
+      {/* Avatar */}
+      <View style={[styles.avatar, isPinned && styles.avatarPinned]}>
+        <Text style={[styles.avatarText, isPinned && styles.avatarTextPinned]}>
+          {initials}
+        </Text>
+        {isPinned && <View style={styles.verifiedDot} />}
+      </View>
+
+      {/* Content */}
+      <View style={styles.rowBody}>
+        <View style={styles.rowTop}>
+          <Text style={styles.rowName} numberOfLines={1}>
+            {item.otherUser?.displayName || "Coordination board"}
+          </Text>
+          <Text style={styles.rowTime}>{formatTime(item.lastMessageAt)}</Text>
+        </View>
+        <Text style={styles.rowPreview} numberOfLines={1}>
+          {item.lastMessageText || item.jobTitle || "No messages yet"}
+        </Text>
+      </View>
+    </Pressable>
+  );
+};
+
+/* ─── Filter pill ─── */
+const FilterPill = ({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) => (
+  <Pressable
+    style={[styles.pill, active && styles.pillActive]}
+    onPress={onPress}
+    android_ripple={null}
+  >
+    <Text style={[styles.pillLabel, active && styles.pillLabelActive]}>
+      {label}
+    </Text>
+  </Pressable>
+);
+
 export default function ChatUsersScreen() {
   const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     conversationId?: string;
     otherClerkId?: string;
@@ -38,17 +124,13 @@ export default function ChatUsersScreen() {
   }>();
 
   const [query, setQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<"all" | "active">("all");
 
   const conversationId = params.conversationId;
   const otherDisplayName = params.otherDisplayName;
   const jobTitle = params.jobTitle;
 
-  const {
-    conversations,
-    loading,
-    error,
-    refresh,
-  } = useMessagingConversations({
+  const { conversations, loading, error, refresh } = useMessagingConversations({
     apiUrl: API_BASE_URL,
     getToken,
     enabled: isLoaded && !!isSignedIn && !!userId,
@@ -56,18 +138,21 @@ export default function ChatUsersScreen() {
 
   const filteredConversations = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) {
-      return conversations;
+    let list = conversations;
+
+    if (normalizedQuery) {
+      list = list.filter((c) => {
+        const name = c.otherUser?.displayName?.toLowerCase() || "";
+        const title = c.jobTitle?.toLowerCase() || "";
+        return name.includes(normalizedQuery) || title.includes(normalizedQuery);
+      });
     }
 
-    return conversations.filter((conversation) => {
-      const name = conversation.otherUser?.displayName?.toLowerCase() || "";
-      const title = conversation.jobTitle?.toLowerCase() || "";
-      return name.includes(normalizedQuery) || title.includes(normalizedQuery);
-    });
+    return list;
   }, [conversations, query]);
 
   const openConversation = (conversation: ConversationRow) => {
+    if (conversation.conversationId === "__team_qh__") return;
     router.push({
       pathname: "/(root)/chat",
       params: {
@@ -79,30 +164,37 @@ export default function ChatUsersScreen() {
     });
   };
 
+  /* ── Conversation detail view ── */
   if (conversationId) {
     if (!isLoaded || !isSignedIn || !userId) {
       return (
-        <View style={styles.centered}>
-          <ActivityIndicator />
+        <View style={[styles.centered, { paddingTop: insets.top }]}>
+          <ActivityIndicator color={COLORS.navy} />
           <Text style={styles.helper}>Loading your account...</Text>
         </View>
       );
     }
 
     return (
-      <View style={styles.container}>
-        <View style={styles.headerRow}>
+      <View style={[styles.container, { paddingTop: 0 }]}>
+        {/* Conversation header */}
+        <View style={[styles.detailHeader, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity
             onPress={() => router.replace("/(root)/chat")}
-            style={styles.backButton}
+            style={styles.backBtn}
           >
-            <Text style={styles.backButtonText}>Back</Text>
+            <ChevronLeft size={20} color={COLORS.navy} strokeWidth={2.2} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Coordination Board</Text>
-            <Text style={styles.helper}>Simple status updates only</Text>
+            <Text style={styles.detailTitle} numberOfLines={1}>
+              {otherDisplayName || "Coordination Board"}
+            </Text>
+            {jobTitle ? (
+              <Text style={styles.detailSub} numberOfLines={1}>{jobTitle}</Text>
+            ) : null}
           </View>
         </View>
+
         <ConversationChatScreen
           clerkUserId={userId}
           conversationId={conversationId}
@@ -113,58 +205,66 @@ export default function ChatUsersScreen() {
     );
   }
 
+  /* ── Board list view ── */
+  const topPad = insets.top + (Platform.OS === "android" ? 12 : 0);
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Coordination Boards</Text>
-      <Text style={styles.helper}>
-        Each board shows the latest status and the next action for a job.
-      </Text>
+    <View style={[styles.container, { paddingTop: topPad }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Boards</Text>
+        <Pressable style={styles.headerIcon} android_ripple={null}>
+          <PenSquare size={20} color={COLORS.navyDark} strokeWidth={1.8} />
+        </Pressable>
+      </View>
 
-      <TextInput
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Filter by client or job"
-        placeholderTextColor="#94A3B8"
-        style={styles.search}
-      />
+      {/* Search */}
+      <View style={styles.searchWrap}>
+        <Search size={16} color={COLORS.textMuted} strokeWidth={2} style={styles.searchIcon} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search..."
+          placeholderTextColor={COLORS.textMuted}
+          style={styles.searchInput}
+        />
+      </View>
 
-      {!isLoaded || !isSignedIn ? (
-        <Text style={styles.helper}>Sign in to view your boards.</Text>
-      ) : null}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {/* Filter pills */}
+      <View style={styles.filters}>
+        <FilterPill label="All" active={activeFilter === "all"} onPress={() => setActiveFilter("all")} />
+        <FilterPill label="Active" active={activeFilter === "active"} onPress={() => setActiveFilter("active")} />
+      </View>
 
+      {/* Error */}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+      {/* List */}
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 24 }} />
+        <View style={styles.centered}>
+          <ActivityIndicator color={COLORS.navy} />
+        </View>
       ) : (
         <FlatList
-          data={filteredConversations}
+          data={[TEAM_QH_ITEM, ...filteredConversations]}
           keyExtractor={(item) => item.conversationId}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <Pressable style={styles.row} onPress={() => openConversation(item)}>
-              <View style={styles.rowAvatar}>
-                <Text style={styles.rowAvatarText}>{getInitials(item.otherUser?.displayName)}</Text>
-              </View>
-              <View style={styles.rowContent}>
-                <Text style={styles.name}>{item.otherUser?.displayName || "Coordination board"}</Text>
-                <Text style={styles.sub}>{item.jobTitle || "Open board"}</Text>
-                <Text style={styles.time}>
-                  {item.lastMessageAt
-                    ? new Date(item.lastMessageAt).toLocaleDateString()
-                    : "No status yet"}
-                </Text>
-              </View>
-            </Pressable>
+            <ConvoRow
+              item={item}
+              isPinned={item.conversationId === "__team_qh__"}
+              onPress={() => openConversation(item)}
+            />
           )}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
           ListEmptyComponent={
-            <View style={styles.emptyCard}>
-              <View style={styles.emptyIconBadge}>
-                <ChatBubbleLeftRightIcon size={26} color={COLORS.navy} />
-              </View>
+            <View style={styles.emptyWrap}>
               <Text style={styles.emptyTitle}>No boards yet</Text>
               <Text style={styles.emptyText}>
                 Apply to a job and your coordination board will appear here.
               </Text>
-              <TouchableOpacity onPress={() => refresh()} style={styles.refreshButton}>
+              <TouchableOpacity onPress={() => refresh()} style={styles.refreshBtn}>
                 <Text style={styles.refreshLabel}>Refresh</Text>
               </TouchableOpacity>
             </View>
@@ -178,137 +278,228 @@ export default function ChatUsersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    paddingTop: 48,
-    backgroundColor: COLORS.background,
+    backgroundColor: "#FFFFFF",
   },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: "#FFFFFF",
+    gap: 8,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1A1C1F",
-  },
-  helper: {
-    color: "#6B7479",
-    marginTop: 4,
-    marginBottom: 12,
-  },
-  headerRow: {
+
+  /* Header */
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
-  backButton: {
-    backgroundColor: COLORS.navy,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  backButtonText: {
-    color: "#FFFFFF",
+  title: {
+    fontSize: 26,
     fontWeight: "700",
+    color: "#0F172A",
+    letterSpacing: -0.4,
   },
-  search: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+  headerIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#F4F5F7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  /* Search */
+  searchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
     marginBottom: 12,
-    color: "#1A1C1F",
+    backgroundColor: "#F4F5F7",
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 14,
+    height: 42,
   },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#0F172A",
+    paddingVertical: 0,
+  },
+
+  /* Filter pills */
+  filters: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    gap: 8,
+    marginBottom: 4,
+  },
+  pill: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: RADIUS.pill,
+    backgroundColor: "#F4F5F7",
+  },
+  pillActive: {
+    backgroundColor: "#0F172A",
+  },
+  pillLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  pillLabelActive: {
+    color: "#FFFFFF",
+  },
+
+  /* List */
+  listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 100,
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#F1F3F5",
+    marginLeft: 72,
+  },
+
+  /* Conversation row */
   row: {
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 12,
     gap: 12,
-    backgroundColor: "#FFFFFF",
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
-    padding: 16,
-    marginBottom: 10,
   },
-  rowAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.navySoft,
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#EEF3F8",
     alignItems: "center",
     justifyContent: "center",
   },
-  rowAvatarText: {
-    fontSize: 14,
+  avatarPinned: {
+    backgroundColor: "#1F3A4A",
+  },
+  avatarText: {
+    fontSize: 15,
     fontWeight: "700",
     color: COLORS.navy,
   },
-  rowContent: {
+  avatarTextPinned: {
+    color: "#FFFFFF",
+  },
+  verifiedDot: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#22C55E",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+  rowBody: {
     flex: 1,
   },
-  name: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1A1C1F",
-    marginBottom: 4,
-  },
-  sub: {
-    fontSize: 13,
-    color: "#52839B",
-  },
-  time: {
-    marginTop: 8,
-    fontSize: 12,
-    color: "#A8B2B5",
-  },
-  error: {
-    color: "#DC2626",
-    marginBottom: 12,
-  },
-  emptyCard: {
-    marginTop: 24,
-    backgroundColor: "#FFFFFF",
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
-    padding: 20,
+  rowTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 3,
   },
-  emptyIconBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: COLORS.navySoft,
+  rowName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#0F172A",
+    marginRight: 8,
+  },
+  rowTime: {
+    fontSize: 12,
+    color: "#94A3B8",
+  },
+  rowPreview: {
+    fontSize: 13,
+    color: "#64748B",
+    lineHeight: 18,
+  },
+
+  /* Detail view header */
+  detailHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F4F5F7",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
+  },
+  detailTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  detailSub: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 1,
+  },
+
+  /* Empty / error / misc */
+  helper: {
+    color: "#64748B",
+    fontSize: 13,
+  },
+  errorText: {
+    color: "#DC2626",
+    marginHorizontal: 16,
+    marginBottom: 12,
+    fontSize: 13,
+  },
+  emptyWrap: {
+    alignItems: "center",
+    paddingTop: 48,
+    paddingHorizontal: 32,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
-    color: "#1A1C1F",
-    marginBottom: 6,
+    color: "#0F172A",
+    marginBottom: 8,
   },
   emptyText: {
     fontSize: 13,
     lineHeight: 20,
+    color: "#64748B",
     textAlign: "center",
-    color: "#6B7479",
-    marginBottom: 12,
+    marginBottom: 20,
   },
-  refreshButton: {
-    backgroundColor: COLORS.navy,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: 14,
+  refreshBtn: {
+    paddingHorizontal: 20,
     paddingVertical: 10,
+    borderRadius: RADIUS.pill,
+    backgroundColor: "#0F172A",
   },
   refreshLabel: {
     color: "#FFFFFF",
-    fontWeight: "700",
+    fontWeight: "600",
+    fontSize: 13,
   },
 });

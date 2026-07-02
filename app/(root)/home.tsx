@@ -14,13 +14,17 @@ import * as Location from "expo-location"
 import {
   ActivityIndicator,
   Alert,
+  Image,
   RefreshControl,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native"
+
+const FALLBACK_AVATAR = require("../../assets/images/quickhands.png")
 import { SafeAreaView } from "react-native-safe-area-context"
 import Toast from "react-native-toast-message"
 import AsyncStorage from "@react-native-async-storage/async-storage"
@@ -493,20 +497,17 @@ const Home = () => {
         contentContainerStyle={{ padding: 20, paddingBottom: 42 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2D4A6A" />}
       >
-        <View className="mb-5 flex-row items-start justify-between">
-          <View className="flex-1 pr-4">
-            <Text className="text-sm font-semibold uppercase tracking-[1px] text-slate-400">
-              Discovery
-            </Text>
-            <Text className="mt-2 text-3xl font-bold text-slate-950">
-              {user?.firstName || "Freelancer"}
-            </Text>
-            <Text className="mt-2 text-sm leading-6 text-slate-500">
-              A calm feed of nearby, trusted jobs with the next action already clear.
-            </Text>
+        {/* ── Whop-style home header ── */}
+        <View style={homeStyles.header}>
+          <View style={homeStyles.headerLeft}>
+            <Image
+              source={user?.imageUrl ? { uri: user.imageUrl } : FALLBACK_AVATAR}
+              style={homeStyles.avatar}
+            />
+            <Text style={homeStyles.title}>Home</Text>
           </View>
           {user?.id ? (
-            <View className="rounded-2xl border border-[#D8E8ED] bg-white p-3">
+            <View style={homeStyles.bellPill}>
               <NotificationBell userId={user.id} />
             </View>
           ) : null}
@@ -821,5 +822,39 @@ const Home = () => {
     </SafeAreaView>
   )
 }
+
+const homeStyles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#0F172A",
+    letterSpacing: -0.4,
+  },
+  bellPill: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#D8E8ED",
+    backgroundColor: "#FFFFFF",
+    padding: 10,
+  },
+})
 
 export default Home

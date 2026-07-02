@@ -2,263 +2,280 @@
 
 import { useEffect, useState } from "react"
 import { Tabs, router } from "expo-router"
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native"
+import {
+  Dimensions,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native"
 import { useUser } from "@clerk/clerk-expo"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { ArrowUpOnSquareStackIcon } from "react-native-heroicons/outline"
-import { BlurView } from "expo-blur"
-import { LinearGradient } from "expo-linear-gradient"
-import { Home, MessageCircle, User } from "lucide-react-native"
+import { Home, MessageCircle, User, Zap } from "lucide-react-native"
 import { useNotifications } from "@/contexts/NotificationsContext"
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated"
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs"
 
-const TAB_BAR_HEIGHT = 82
+const { width: SCREEN_W } = Dimensions.get("window")
 
-const COLOR = {
-  background: "#EEF2F3",
-  shellBorder: "rgba(255,255,255,0.86)",
-  shellShadow: "rgba(25,39,52,0.16)",
-  active: "#1F3A4A",
-  activeSoft: "rgba(31,58,74,0.11)",
-  accent: "#6F8B74",
-  inactive: "#80909C",
-  label: "#233746",
-  badge: "#E35D5B",
+/* ─── Layout constants ─── */
+const ICON_AREA_H = 52   // visible icon row height
+const PILL_W = 52
+const PILL_H = 44
+const NUM_TABS = 4
+const TAB_W = SCREEN_W / NUM_TABS
+
+/* ─── Design tokens ─── */
+const C = {
+  bg:       "#EEF2F3",
+  active:   "#1F3A4A",
+  pill:     "#EBEBED",
+  inactive: "#A8B4BD",
+  surface:  "#FFFFFF",
+  border:   "#E5E7EB",
+  badge:    "#E35D5B",
 }
 
-const TabIcon = ({
-  Icon,
-  focused,
-  label,
-  badgeCount = 0,
-}: {
-  Icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
-  focused: boolean
-  label: string
-  badgeCount?: number
-}) => {
-  const badgeLabel = badgeCount > 99 ? "99+" : badgeCount.toString()
+/* ─── Two-ring loading spinner ─── */
+const TwoRingSpinner = ({ size = 40 }: { size?: number }) => {
+  const r1 = useSharedValue(0)
+  const r2 = useSharedValue(0)
+
+  useEffect(() => {
+    r1.value = withRepeat(withTiming(360, { duration: 1100, easing: Easing.linear }), -1)
+    r2.value = withRepeat(withTiming(-360, { duration: 1700, easing: Easing.linear }), -1)
+  }, [])
+
+  const s1 = useAnimatedStyle(() => ({ transform: [{ rotate: `${r1.value}deg` }] }))
+  const s2 = useAnimatedStyle(() => ({ transform: [{ rotate: `${r2.value}deg` }] }))
+  const inner = size * 0.58
 
   return (
-    <View
-      style={{
-        width: 74,
-        height: 58,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <View
-        style={{
-          minWidth: 58,
-          height: 36,
-          paddingHorizontal: focused ? 14 : 0,
-          borderRadius: 999,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: focused ? COLOR.activeSoft : "transparent",
-        }}
-      >
-        <Icon
-          size={21}
-          color={focused ? COLOR.active : COLOR.inactive}
-          strokeWidth={focused ? 2.4 : 2}
-        />
-
-        {badgeCount > 0 ? (
-          <View
-            style={{
-              position: "absolute",
-              top: -4,
-              right: focused ? 4 : 14,
-              minWidth: 18,
-              height: 18,
-              paddingHorizontal: 4,
-              borderRadius: 9,
-              backgroundColor: COLOR.badge,
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 1.5,
-              borderColor: "#F7FAFA",
-            }}
-          >
-            <Text
-              style={{
-                color: "#ffffff",
-                fontSize: 9,
-                lineHeight: 10,
-                fontWeight: "700",
-              }}
-            >
-              {badgeLabel}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      <Text
-        style={{
-          marginTop: 6,
-          fontSize: 10,
-          lineHeight: 12,
-          letterSpacing: 0.34,
-          textTransform: "uppercase",
-          fontWeight: focused ? "700" : "600",
-          color: focused ? COLOR.label : COLOR.inactive,
-        }}
-      >
-        {label}
-      </Text>
+    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+      <Animated.View style={[{
+        position: "absolute", width: size, height: size,
+        borderRadius: size / 2, borderWidth: 2,
+        borderColor: `${C.active}18`, borderTopColor: C.active,
+      }, s1]} />
+      <Animated.View style={[{
+        position: "absolute", width: inner, height: inner,
+        borderRadius: inner / 2, borderWidth: 1.5,
+        borderColor: `${C.active}18`, borderBottomColor: C.active,
+      }, s2]} />
     </View>
   )
 }
 
-const TabBarShell = () => (
-  <View style={styles.shell}>
-    <BlurView
-      tint={Platform.OS === "ios" ? "light" : "default"}
-      intensity={45}
-      style={StyleSheet.absoluteFill}
-    />
-    <LinearGradient
-      colors={["rgba(255,255,255,0.96)", "rgba(239,245,243,0.92)"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={StyleSheet.absoluteFill}
-    />
-  </View>
-)
+/* ─── Icons registry ─── */
+type LucideIcon = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
+const ICONS: Record<string, LucideIcon> = {
+  home: Home,
+  chat: MessageCircle,
+  profile: User,
+  train: Zap,
+}
 
-export default function Layout() {
-  const { isLoaded, isSignedIn } = useUser()
-  const { unreadCount } = useNotifications()
-  const [isNavigationReady, setIsNavigationReady] = useState(false)
-  const insets = useSafeAreaInsets()
+/* ─── Single tab button ─── */
+function TabItem({
+  route,
+  isFocused,
+  onPress,
+  badgeCount = 0,
+}: {
+  route: { name: string; key: string }
+  isFocused: boolean
+  onPress: () => void
+  badgeCount?: number
+}) {
+  const Icon = ICONS[route.name] ?? Home
+  const scale = useSharedValue(isFocused ? 1.08 : 1)
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsNavigationReady(true), 100)
-    return () => clearTimeout(timer)
+    scale.value = withSpring(isFocused ? 1.08 : 1, { damping: 14, stiffness: 260 })
+  }, [isFocused])
+
+  const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }))
+
+  return (
+    <Pressable style={styles.tabItem} onPress={onPress} android_ripple={null}>
+      <Animated.View style={anim}>
+        <Icon
+          size={22}
+          color={isFocused ? C.active : C.inactive}
+          strokeWidth={isFocused ? 2.3 : 1.8}
+        />
+      </Animated.View>
+
+      {badgeCount > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>
+            {badgeCount > 99 ? "99+" : String(badgeCount)}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  )
+}
+
+/* ─── Liquid tab bar (Whop-inspired flat style) ─── */
+function CustomTabBar({ state, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets()
+  const { unreadCount } = useNotifications()
+
+  const pillX = useSharedValue(
+    state.index * TAB_W + (TAB_W - PILL_W) / 2
+  )
+
+  useEffect(() => {
+    pillX.value = withSpring(
+      state.index * TAB_W + (TAB_W - PILL_W) / 2,
+      { damping: 22, stiffness: 300, mass: 0.8 }
+    )
+  }, [state.index])
+
+  const pillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: pillX.value }],
+  }))
+
+  return (
+    <View
+      style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 8) }]}
+      pointerEvents="box-none"
+    >
+      {/* Sliding pill */}
+      <Animated.View style={[styles.pill, pillStyle]} />
+
+      {/* Tab icons */}
+      <View style={styles.tabRow}>
+        {state.routes.map((route, index) => (
+          <TabItem
+            key={route.key}
+            route={route}
+            isFocused={state.index === index}
+            onPress={() => {
+              if (state.index !== index) navigation.navigate(route.name)
+            }}
+            badgeCount={route.name === "chat" ? unreadCount : 0}
+          />
+        ))}
+      </View>
+    </View>
+  )
+}
+
+/* ─── Root layout ─── */
+export default function Layout() {
+  const { isLoaded, isSignedIn } = useUser()
+  const [navReady, setNavReady] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setNavReady(true), 100)
+    return () => clearTimeout(t)
   }, [])
 
   useEffect(() => {
-    if (!isLoaded || !isNavigationReady) return
-    if (!isSignedIn) {
-      router.replace("/")
-    }
-  }, [isLoaded, isNavigationReady, isSignedIn])
+    if (!isLoaded || !navReady) return
+    if (!isSignedIn) router.replace("/")
+  }, [isLoaded, navReady, isSignedIn])
 
   if (!isLoaded) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: COLOR.background,
-        }}
-      >
-        <View
-          style={{
-            width: 60,
-            height: 60,
-            borderRadius: 20,
-            backgroundColor: "rgba(255,255,255,0.88)",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: 16,
-            shadowColor: "#1C3140",
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.08,
-            shadowRadius: 18,
-            elevation: 5,
-          }}
-        >
-          <ActivityIndicator size="small" color={COLOR.active} />
-        </View>
-        <Text
-          style={{
-            color: COLOR.inactive,
-            fontSize: 13,
-            fontWeight: "600",
-            letterSpacing: 0.3,
-          }}
-        >
-          Loading workspace
-        </Text>
+      <View style={styles.loadingWrap}>
+        <TwoRingSpinner size={42} />
+        <Text style={styles.loadingLabel}>Loading workspace</Text>
       </View>
     )
   }
 
   return (
     <Tabs
-      initialRouteName="home"
-      screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarStyle: {
-          position: "absolute",
-          left: 16,
-          right: 16,
-          bottom: Math.max(insets.bottom, 10),
-          height: TAB_BAR_HEIGHT,
-          paddingTop: 10,
-          paddingBottom: 8,
-          backgroundColor: "transparent",
-          borderTopWidth: 0,
-          elevation: 0,
-          shadowColor: COLOR.shellShadow,
-          shadowOffset: { width: 0, height: 16 },
-          shadowOpacity: 1,
-          shadowRadius: 28,
-        },
-        tabBarBackground: () => <TabBarShell />,
-        tabBarItemStyle: {
-          height: TAB_BAR_HEIGHT - 6,
-          justifyContent: "center",
-          alignItems: "center",
-        },
-      }}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <CustomTabBar {...props} />}
     >
-      <Tabs.Screen
-        name="home"
-        options={{
-          tabBarIcon: ({ focused }) => <TabIcon Icon={Home} focused={focused} label="Home" />,
-        }}
-      />
-
-      <Tabs.Screen
-        name="chat"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon Icon={MessageCircle} focused={focused} label="Board" badgeCount={unreadCount} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="profile"
-        options={{
-          tabBarIcon: ({ focused }) => <TabIcon Icon={User} focused={focused} label="Profile" />,
-        }}
-      />
-
-      <Tabs.Screen
-        name="train"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon Icon={ArrowUpOnSquareStackIcon} focused={focused} label="Train" />
-          ),
-        }}
-      />
+      <Tabs.Screen name="home" />
+      <Tabs.Screen name="chat" />
+      <Tabs.Screen name="profile" />
+      <Tabs.Screen name="train" />
     </Tabs>
   )
 }
 
 const styles = StyleSheet.create({
-  shell: {
+  loadingWrap: {
     flex: 1,
-    borderRadius: 32,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: COLOR.shellBorder,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: C.bg,
+    gap: 14,
+  },
+  loadingLabel: {
+    color: C.inactive,
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.4,
+  },
+  /* Full-width flat bar — Whop style */
+  bar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: C.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: C.border,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  tabRow: {
+    flexDirection: "row",
+    height: ICON_AREA_H,
+    alignItems: "center",
+  },
+  tabItem: {
+    flex: 1,
+    height: ICON_AREA_H,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  /* Liquid pill indicator */
+  pill: {
+    position: "absolute",
+    top: (ICON_AREA_H - PILL_H) / 2,
+    left: 0,
+    width: PILL_W,
+    height: PILL_H,
+    borderRadius: 22,
+    backgroundColor: C.pill,
+  },
+  badge: {
+    position: "absolute",
+    top: 8,
+    right: "18%",
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 3,
+    borderRadius: 8,
+    backgroundColor: C.badge,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: C.surface,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 8,
+    fontWeight: "700",
+    lineHeight: 10,
   },
 })
