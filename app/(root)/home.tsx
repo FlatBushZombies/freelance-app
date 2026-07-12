@@ -1,7 +1,7 @@
 "use client"
 
 import { NotificationBell } from "@/components/Notifications"
-import { ApplicationModal } from "@/components/ApplicationModal"
+import { ApplicationModal, type ApplicationResult } from "@/components/ApplicationModal"
 import {
   ApplicationRadar,
   type ApplicationRadarItem,
@@ -9,7 +9,7 @@ import {
 import { fetchAPI, getApiUrl } from "@/lib/fetch"
 import { useAuth, useUser } from "@clerk/clerk-expo"
 import { router } from "expo-router"
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react"
+import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 import * as Location from "expo-location"
 import {
   ActivityIndicator,
@@ -26,8 +26,14 @@ import {
 
 const FALLBACK_AVATAR = require("../../assets/images/quickhands.png")
 import { SafeAreaView } from "react-native-safe-area-context"
-import Toast from "react-native-toast-message"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import {
+  hasAcceptedApplication,
+  startBackgroundProximityTracking,
+  stopBackgroundProximityTracking,
+} from "@/lib/backgroundLocation"
+
+const PROXIMITY_TRACKING_STORAGE_KEY = "quickhands_proximity_tracking_enabled"
 
 interface Job {
   id: string
@@ -155,6 +161,29 @@ const Home = () => {
         return
       }
 
+      // Show cached location immediately so the UI never shows "Detecting…" for long
+      const lastKnown = await Location.getLastKnownPositionAsync()
+      if (lastKnown) {
+        const [cachedResult] = await Location.reverseGeocodeAsync({
+          latitude: lastKnown.coords.latitude,
+          longitude: lastKnown.coords.longitude,
+        })
+        const cachedLocation = {
+          label:
+            cachedResult?.city ||
+            cachedResult?.district ||
+            cachedResult?.subregion ||
+            cachedResult?.region ||
+            "Your current area",
+          city: cachedResult?.city || cachedResult?.district || cachedResult?.subregion || null,
+          latitude: lastKnown.coords.latitude,
+          longitude: lastKnown.coords.longitude,
+        }
+        setNearbyLocation({ loading: false, ...cachedLocation })
+        void syncFreelancerLocation(cachedLocation)
+      }
+
+      // Refresh quietly with accurate GPS in the background
       const currentPosition = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       })
@@ -182,13 +211,13 @@ const Home = () => {
       await syncFreelancerLocation(nextLocation)
     } catch (error) {
       console.warn("[Location] Failed to load freelancer area", error)
-      setNearbyLocation({
+      setNearbyLocation((prev) => ({
         loading: false,
-        label: null,
-        city: null,
-        latitude: null,
-        longitude: null,
-      })
+        label: prev.label ?? null,
+        city: prev.city ?? null,
+        latitude: prev.latitude ?? null,
+        longitude: prev.longitude ?? null,
+      }))
     }
   }
 
@@ -342,6 +371,83 @@ const Home = () => {
     }
   }, [user?.id])
 
+  // Reconcile background proximity tracking each time the app opens: only
+  // actually run it when the freelancer both opted in (profile toggle) and
+  // currently has an accepted application — re-checked here rather than
+  // continuously, so tracking turns itself off once it's no longer needed.
+  useEffect(() => {
+    if (!user?.id) return
+
+    let cancelled = false
+
+    ;(async () => {
+      const preference = await AsyncStorage.getItem(PROXIMITY_TRACKING_STORAGE_KEY)
+      if (cancelled || preference !== "true") return
+
+      const eligible = await hasAcceptedApplication(getToken)
+      if (cancelled) return
+
+      if (eligible) {
+        void startBackgroundProximityTracking(getToken)
+      } else {
+        void stopBackgroundProximityTracking()
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
+
+  const nearbyLocationRef = useRef(nearbyLocation)
+  useEffect(() => {
+    nearbyLocationRef.current = nearbyLocation
+  }, [nearbyLocation])
+
+  // Foreground-only proximity tracking: while this screen is mounted and the
+  // freelancer moves, push updated coordinates to the backend so it can
+  // detect when they're near a job site they've been accepted for. Stops as
+  // soon as the screen unmounts or the user signs out — no background
+  // tracking in v1.
+  useEffect(() => {
+    if (!user?.id) {
+      return
+    }
+
+    let subscription: Location.LocationSubscription | null = null
+    let cancelled = false
+
+    const startWatching = async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync()
+      if (status !== "granted" || cancelled) {
+        return
+      }
+
+      subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          distanceInterval: 100,
+          timeInterval: 45000,
+        },
+        (position) => {
+          void syncFreelancerLocation({
+            label: nearbyLocationRef.current.label,
+            city: nearbyLocationRef.current.city,
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          })
+        }
+      )
+    }
+
+    void startWatching()
+
+    return () => {
+      cancelled = true
+      subscription?.remove()
+    }
+  }, [user?.id])
+
   useEffect(() => {
     if (!user?.id) {
       return
@@ -389,8 +495,10 @@ const Home = () => {
     setModalVisible(true)
   }
 
-  const submitApplication = async (applicationData: { quotation: string; conditions: string }) => {
-    if (!selectedJob || !user?.id) return
+  const submitApplication = async (applicationData: { quotation: string; conditions: string }): Promise<ApplicationResult> => {
+    if (!selectedJob || !user?.id) {
+      return { status: "error", message: "Sign in required to apply." }
+    }
 
     setApplyingJobs((current) => new Set(current).add(selectedJob.id))
 
@@ -412,50 +520,49 @@ const Home = () => {
         }),
       })
 
-      const data = await response.json()
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Failed to apply")
+      const data = await response.json().catch(() => ({}))
+
+      if (data.alreadyApplied) {
+        return { status: "already_applied" }
       }
 
+      if (!response.ok || !data.success) {
+        return { status: "error", message: data.message || `Server error (${response.status})` }
+      }
+
+      // Persist applied state locally
       const updatedAppliedJobs = new Set(appliedJobs).add(selectedJob.id)
       setAppliedJobs(updatedAppliedJobs)
-      await AsyncStorage.setItem(`appliedJobs_${user.id}`, JSON.stringify(Array.from(updatedAppliedJobs)))
-      await loadAppliedJobs()
+      void AsyncStorage.setItem(`appliedJobs_${user.id}`, JSON.stringify(Array.from(updatedAppliedJobs)))
+      void loadAppliedJobs()
 
-      Toast.show({
-        type: "success",
-        text1: data.alreadyApplied ? "Already applied" : "Applied successfully",
-        text2: data.alreadyApplied ? "You already applied to this job." : "The client has been notified.",
-        position: "bottom",
-      })
-
-      setModalVisible(false)
-
-      if (data.conversation?.conversationId) {
-        router.push({
-          pathname: "/(root)/chat",
-          params: {
-            conversationId: data.conversation.conversationId,
-            otherClerkId: data.conversation.otherClerkId,
-            otherDisplayName: data.conversation.otherDisplayName,
-            jobTitle: data.conversation.jobTitle || selectedJob.title,
-          },
-        })
+      return {
+        status: "success",
+        conversationId: data.conversation?.conversationId,
+        otherClerkId: data.conversation?.otherClerkId,
+        otherDisplayName: data.conversation?.otherDisplayName,
+        jobTitle: data.conversation?.jobTitle || selectedJob.title,
       }
     } catch (error) {
-      Toast.show({
-        type: "error",
-        text1: "Application failed",
-        text2: error instanceof Error ? error.message : "Please try again",
-        position: "bottom",
-      })
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Network error — check your connection.",
+      }
     } finally {
       setApplyingJobs((current) => {
         const next = new Set(current)
-        next.delete(selectedJob.id)
+        next.delete(selectedJob?.id ?? "")
         return next
       })
     }
+  }
+
+  const handleOpenChat = (conversationId: string, otherClerkId: string, otherDisplayName: string, jobTitle: string) => {
+    setModalVisible(false)
+    router.push({
+      pathname: "/(root)/chat",
+      params: { conversationId, otherClerkId, otherDisplayName, jobTitle },
+    })
   }
 
   const openApplicationConversation = (application: ApplicationRadarItem) => {
@@ -753,7 +860,7 @@ const Home = () => {
 
                   <View className="min-w-[104px] rounded-[24px] bg-[#F4F8F8] px-4 py-4">
                     <Text className="text-[11px] font-bold uppercase tracking-[1px] text-slate-400">Budget</Text>
-                    <Text className="mt-2 text-2xl font-bold text-slate-950">R{job.budget.toFixed(0)}</Text>
+                    <Text className="mt-2 text-2xl font-bold text-slate-950">US${job.budget.toFixed(0)}</Text>
                   </View>
                 </View>
 
@@ -815,6 +922,7 @@ const Home = () => {
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
           onSubmit={submitApplication}
+          onOpenChat={handleOpenChat}
           jobTitle={selectedJob.title}
           jobBudget={selectedJob.budget}
         />

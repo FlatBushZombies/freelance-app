@@ -14,6 +14,7 @@ import {
 import { BellAlertIcon, BellIcon, XMarkIcon } from "react-native-heroicons/outline"
 import { useNotifications } from "@/contexts/NotificationsContext"
 import { COLORS } from "@/constants/theme"
+import { navigateForNotificationData } from "@/lib/pushNotifications"
 
 interface NotificationBellProps {
   userId: string
@@ -112,7 +113,13 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
 
     return (
       <TouchableOpacity
-        onPress={() => void markAsRead(item.id)}
+        onPress={() => {
+          void markAsRead(item.id)
+          if (item.conversationId || item.jobId) {
+            setModalVisible(false)
+            navigateForNotificationData(item)
+          }
+        }}
         activeOpacity={0.7}
         style={{
           backgroundColor: item.read ? "#FFFFFF" : "#F8FAFC",

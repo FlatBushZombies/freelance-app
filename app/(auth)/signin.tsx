@@ -6,6 +6,7 @@ import { Alert, ScrollView, Text, View } from "react-native"
 import CustomButton from "@/components/CustomButton"
 import InputField from "@/components/InputField"
 import OAuth from "@/components/OAuth"
+import { AlreadySignedInRedirect } from "@/components/AlreadySignedInRedirect"
 import { icons } from "@/constants"
 
 const SignIn = () => {
@@ -14,12 +15,6 @@ const SignIn = () => {
 
   const [form, setForm] = useState({ email: "", password: "" })
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (!isLoaded) return
-    // Always go through index route so onboarding check runs consistently.
-    if (isSignedIn) router.replace("/")
-  }, [isLoaded, isSignedIn])
 
   const onSignInPress = useCallback(async () => {
     if (!isLoaded || loading) return
@@ -53,7 +48,7 @@ const SignIn = () => {
   }, [isLoaded, loading, form, signIn, setActive])
 
   if (!isLoaded) return null
-  if (isSignedIn) return null
+  if (isSignedIn) return <AlreadySignedInRedirect />
 
   return (
     <ScrollView
@@ -63,13 +58,10 @@ const SignIn = () => {
     >
       <View className="flex-1 bg-white">
 
-        {/* ── Header Section ── */}
         <View className="w-full h-[280px] bg-gray-50 justify-end pb-8 px-7 rounded-b-[32px]">
 
-          {/* Accent bar */}
           <View className="absolute top-0 left-0 right-0 h-[3px] bg-[#2D4A6A] rounded-b-sm" />
 
-          {/* Welcome label */}
           <View className="flex-row items-center mb-3">
             <View className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2.5" />
             <Text className="font-quicksand-semibold text-[#2D4A6A] text-[13px] tracking-[2px] uppercase">
@@ -77,22 +69,21 @@ const SignIn = () => {
             </Text>
           </View>
 
-          {/* Main heading */}
+          
           <Text className="font-quicksand-bold text-[32px] text-gray-900 tracking-[-0.5px] leading-[38px]">
-            Sign in to{"\n"}your account
+            Create your{"\n"}Quickhands Pro account
           </Text>
 
-          {/* Subtitle */}
+          
           <Text className="font-quicksand-medium text-[15px] text-gray-400 mt-2 leading-[22px]">
             Register as Specialist
           </Text>
         </View>
 
-        {/* ── Form Section ── */}
+        
         <View className="px-6 pt-8 pb-6">
 
 
-          {/* Divider */}
           <View className="flex-row items-center mt-7 mb-1">
             <View className="flex-1 h-px bg-gray-100" />
             <Text className="font-quicksand-medium px-4 text-[13px] text-gray-300 tracking-[0.5px] uppercase">

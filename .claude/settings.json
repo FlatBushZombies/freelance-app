@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "C:\\Users\\gamerrdotcom\\Desktop\\quickhands\\src\\routes",
+      "C:\\Users\\gamerrdotcom\\Desktop\\quickhands\\src\\controllers",
+      "C:\\Users\\gamerrdotcom\\Desktop\\quickhands\\src\\middleware",
+      "C:\\Users\\gamerrdotcom\\Desktop\\quickhands\\src",
+      "C:\\Users\\gamerrdotcom\\Desktop\\quickhands\\db\\migrations",
+      "C:\\Users\\gamerrdotcom\\Desktop\\client-app\\components\\messaging",
+      "C:\\Users\\gamerrdotcom\\Desktop\\quickhands\\src\\services",
+      "C:\\Users\\gamerrdotcom\\Desktop\\client-app\\components",
+      "C:\\Users\\gamerrdotcom\\Desktop\\client-app\\app\\(root)"
+    ]
+  }
+}

@@ -2,12 +2,14 @@
 
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -17,8 +19,16 @@ import { useUser, useAuth } from "@clerk/clerk-expo"
 import { Ionicons } from "@expo/vector-icons"
 import { useEffect, useState } from "react"
 import { router } from "expo-router"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 import WalletComponent from "@/components/WalletComponent"
 import { getApiUrl } from "@/lib/fetch"
+import {
+  hasAcceptedApplication,
+  startBackgroundProximityTracking,
+  stopBackgroundProximityTracking,
+} from "@/lib/backgroundLocation"
+
+const PROXIMITY_TRACKING_STORAGE_KEY = "quickhands_proximity_tracking_enabled"
 
 const FALLBACK_PROFILE_IMAGE = require("../../assets/images/quickhands.png")
 
@@ -99,6 +109,50 @@ const ProfileScreen = () => {
   const [receivedReviews, setReceivedReviews] = useState<ReviewItem[]>([])
   const [reviewDrafts, setReviewDrafts] = useState<Record<number, ReviewDraft>>({})
   const [submittingReviewId, setSubmittingReviewId] = useState<number | null>(null)
+  const [proximityTrackingEnabled, setProximityTrackingEnabled] = useState(false)
+  const [proximityTrackingBusy, setProximityTrackingBusy] = useState(false)
+
+  useEffect(() => {
+    AsyncStorage.getItem(PROXIMITY_TRACKING_STORAGE_KEY).then((value) => {
+      setProximityTrackingEnabled(value === "true")
+    })
+  }, [])
+
+  const toggleProximityTracking = async (nextValue: boolean) => {
+    if (proximityTrackingBusy) return
+    setProximityTrackingBusy(true)
+
+    try {
+      if (!nextValue) {
+        await stopBackgroundProximityTracking()
+        await AsyncStorage.setItem(PROXIMITY_TRACKING_STORAGE_KEY, "false")
+        setProximityTrackingEnabled(false)
+        return
+      }
+
+      const eligible = await hasAcceptedApplication(getToken)
+      if (!eligible) {
+        Alert.alert(
+          "No accepted jobs yet",
+          "This turns on automatically once a client accepts one of your applications. You can still enable it now — it'll start sharing location the moment that happens."
+        )
+      }
+
+      const result = await startBackgroundProximityTracking(getToken)
+      if (!result.started) {
+        Alert.alert(
+          "Couldn't turn this on",
+          result.reason || "Please allow location access and try again."
+        )
+        return
+      }
+
+      await AsyncStorage.setItem(PROXIMITY_TRACKING_STORAGE_KEY, "true")
+      setProximityTrackingEnabled(true)
+    } finally {
+      setProximityTrackingBusy(false)
+    }
+  }
 
   const fetchProfileData = async () => {
     if (!user?.id) return
@@ -393,6 +447,25 @@ const ProfileScreen = () => {
           </View>
         </View>
       ))}
+
+      <View className="mb-2.5 rounded-xl border border-slate-200 bg-white p-4">
+        <View className="flex-row items-start justify-between">
+          <View className="flex-1 pr-3">
+            <Text className="mb-1.5 text-[11px] font-medium uppercase text-slate-400">
+              Nearby arrival alerts
+            </Text>
+            <Text className="text-[13px] leading-5 text-slate-600">
+              Let clients know when you're arriving. Shares your location in the background,
+              starting once a client accepts one of your applications.
+            </Text>
+          </View>
+          {proximityTrackingBusy ? (
+            <ActivityIndicator size="small" color="#2D4A6A" />
+          ) : (
+            <Switch value={proximityTrackingEnabled} onValueChange={toggleProximityTracking} />
+          )}
+        </View>
+      </View>
     </View>
   )
 
@@ -785,7 +858,6 @@ const profileStyles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
   },
 
-  /* Name + handle */
   fullName: {
     fontSize: 20,
     fontWeight: "700",
@@ -803,7 +875,6 @@ const profileStyles = StyleSheet.create({
     marginTop: 3,
   },
 
-  /* Action buttons */
   actionRow: {
     flexDirection: "row",
     gap: 10,
@@ -825,7 +896,6 @@ const profileStyles = StyleSheet.create({
     color: "#0F172A",
   },
 
-  /* Tab bar */
   tabBar: {
     flexDirection: "row",
     borderTopWidth: StyleSheet.hairlineWidth,

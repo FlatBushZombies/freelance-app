@@ -1,4 +1,4 @@
-import { useSignUp } from "@clerk/clerk-expo";
+import { useAuth, useSignUp } from "@clerk/clerk-expo";
 import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Alert, Image, ScrollView, Text, View } from "react-native";
@@ -8,12 +8,14 @@ import { CheckCircleIcon } from "react-native-heroicons/solid";
 import CustomButton from "@/components/CustomButton";
 import InputField from "@/components/InputField";
 import OAuth from "@/components/OAuth";
+import { AlreadySignedInRedirect } from "@/components/AlreadySignedInRedirect";
 import { icons, IMAGES } from "@/constants";
 import { COLORS } from "@/constants/theme";
 import { fetchAPI } from "@/lib/fetch";
 
 const SignUp = () => {
   const { isLoaded, signUp, setActive } = useSignUp();
+  const { isSignedIn } = useAuth();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [form, setForm] = useState({
@@ -83,6 +85,12 @@ const SignUp = () => {
       });
     }
   };
+
+  if (!isLoaded) return null
+  // Only redirect signed-out-flow users away — not mid-verification, since
+  // isSignedIn stays false until setActive() completes the sign-up.
+  if (isSignedIn) return <AlreadySignedInRedirect />
+
   return (
     <ScrollView className="flex-1 bg-white">
       <View className="flex-1 bg-white">

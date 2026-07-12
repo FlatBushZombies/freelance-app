@@ -1,24 +1,26 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { useAuth } from "@clerk/clerk-expo";
-import { getApiUrl } from "@/lib/fetch";
-import { waitForClerkToken } from "@/lib/session";
+import { Ionicons } from "@expo/vector-icons";
+import { API_BASE_URL } from "@/lib/fetch";
+import { useMessagingSocket, type ServerMessage } from "@/hooks/useMessagingSocket";
 import { COLORS, RADIUS } from "@/constants/theme";
 
 const FREELANCER_TAGS = [
-  { kind: "available-now", label: "Available now" },
-  { kind: "need-address", label: "Need address" },
-  { kind: "need-photos", label: "Need photos" },
-  { kind: "running-late", label: "Running late" },
-  { kind: "job-complete", label: "Job complete" },
+  { kind: "available-now", label: "Available now", icon: "checkmark-circle-outline" as const },
+  { kind: "need-address", label: "Need address", icon: "location-outline" as const },
+  { kind: "need-photos", label: "Need photos", icon: "camera-outline" as const },
+  { kind: "running-late", label: "Running late", icon: "time-outline" as const },
+  { kind: "job-complete", label: "Job complete", icon: "checkmark-done-outline" as const },
 ];
 
 type Props = {
@@ -26,14 +28,6 @@ type Props = {
   conversationId: string;
   otherDisplayName?: string;
   jobTitle?: string;
-};
-
-type MessageItem = {
-  id: string;
-  senderId: string;
-  senderName?: string;
-  text: string;
-  createdAt: string;
 };
 
 type ParsedCard = {
@@ -44,38 +38,18 @@ type ParsedCard = {
 
 export function getInitials(name?: string) {
   const trimmed = (name || "").trim();
-  if (!trimmed) {
-    return "?";
-  }
-
+  if (!trimmed) return "?";
   const parts = trimmed.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-function buildCardText(kind: string, label: string, note: string) {
-  return `QH_CARD::${JSON.stringify({
-    kind: String(kind || "update"),
-    label: String(label || "").trim(),
-    note: note.trim() || null,
-  })}`;
 }
 
 function parseCard(text: string): ParsedCard | null {
   const normalized = String(text || "").trim();
-  if (!normalized.startsWith("QH_CARD::")) {
-    return null;
-  }
-
+  if (!normalized.startsWith("QH_CARD::")) return null;
   try {
     const parsed = JSON.parse(normalized.slice("QH_CARD::".length));
-    if (!parsed?.label) {
-      return null;
-    }
-
+    if (!parsed?.label) return null;
     return {
       kind: String(parsed.kind || "update"),
       label: String(parsed.label),
@@ -86,31 +60,27 @@ function parseCard(text: string): ParsedCard | null {
   }
 }
 
-function getNextAction(card: ParsedCard | null, isMine: boolean, otherDisplayName?: string) {
-  const otherName = otherDisplayName || "the client";
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
 
-  if (!card) {
-    return "Use a status card below to tell the client exactly what you need next.";
-  }
+function cardKind(message: ServerMessage) {
+  return parseCard(message.text)?.kind ?? null;
+}
 
-  if (isMine) {
-    return `Waiting for ${otherName} to act on "${card.label}".`;
-  }
+// Consecutive messages from the same sender are visually grouped (like a
+// normal chat app) — a system card always breaks the group on both sides.
+function breaksGroup(a: ServerMessage, b: ServerMessage) {
+  return (
+    a.senderId !== b.senderId ||
+    cardKind(a) === "application-submitted" ||
+    cardKind(b) === "application-submitted"
+  );
+}
 
-  switch (card.kind) {
-    case "ready-for-visit":
-      return "Head out when ready or confirm the arrival time.";
-    case "please-call":
-      return "Call the client directly when you can.";
-    case "share-location":
-      return "Use the shared location and confirm once you are on the way.";
-    case "need-quote-update":
-      return "Send a fresh quote or explain the updated price.";
-    case "confirm-arrival":
-      return "Let the client know when you are leaving or arriving.";
-    default:
-      return `${otherName} shared a new status. Reply with the card that moves the work forward.`;
-  }
+function kindIcon(kind: string): keyof typeof Ionicons.glyphMap {
+  const tag = FREELANCER_TAGS.find((t) => t.kind === kind);
+  return tag?.icon ?? "flag-outline";
 }
 
 export function ConversationChatScreen({
@@ -120,219 +90,198 @@ export function ConversationChatScreen({
   jobTitle,
 }: Props) {
   const { getToken } = useAuth();
-  const [messages, setMessages] = useState<MessageItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
-  const [note, setNote] = useState("");
-  const [selectedTag, setSelectedTag] = useState(FREELANCER_TAGS[0].kind);
-  const [error, setError] = useState<string | null>(null);
+  const [sendingTag, setSendingTag] = useState<string | null>(null);
 
-  const loadMessages = async (showLoader = false) => {
-    if (showLoader) {
-      setLoading(true);
-    }
+  const { messages, sendMessage, loadingHistory, lastError } = useMessagingSocket({
+    serverUrl: API_BASE_URL,
+    apiBaseUrl: API_BASE_URL,
+    getToken,
+    conversationId,
+    enabled: true,
+  });
 
+  const sendChatMessage = async () => {
+    const trimmed = messageText.trim();
+    if (!trimmed || sending) return;
+    setSending(true);
     try {
-      const token = await waitForClerkToken(getToken);
-      if (!token) {
-        setError(null);
-        return;
-      }
-
-      const response = await fetch(
-        getApiUrl(`/api/messaging/conversations/${conversationId}/messages`),
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await response.json();
-
-      if (response.status === 401) {
-        setError(null);
-        return;
-      }
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Failed to load updates");
-      }
-
-      setMessages(Array.isArray(data.messages) ? data.messages : []);
-      setError(null);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load updates");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadMessages(true).catch(() => undefined);
-    const timer = setInterval(() => {
-      loadMessages(false).catch(() => undefined);
-    }, 8000);
-
-    return () => clearInterval(timer);
-  }, [conversationId]);
-
-  const activeTag = useMemo(
-    () => FREELANCER_TAGS.find((tag) => tag.kind === selectedTag) || FREELANCER_TAGS[0],
-    [selectedTag]
-  );
-
-  const latestMessage = messages[messages.length - 1];
-  const latestCard = latestMessage ? parseCard(latestMessage.text) : null;
-  const nextAction = getNextAction(
-    latestCard,
-    latestMessage?.senderId === clerkUserId,
-    otherDisplayName
-  );
-
-  const sendCard = async () => {
-    if (sending) {
-      return;
-    }
-
-    try {
-      setSending(true);
-      const token = await waitForClerkToken(getToken);
-      if (!token) {
-        throw new Error("Your session is still loading. Please try again.");
-      }
-
-      const response = await fetch(
-        getApiUrl(`/api/messaging/conversations/${conversationId}/messages`),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            text: buildCardText(activeTag.kind, activeTag.label, note),
-            tag: activeTag.kind,
-            label: activeTag.label,
-            note,
-          }),
-        }
-      );
-      const data = await response.json();
-
-      if (response.status === 401) {
-        throw new Error("Your session expired. Please reopen the board.");
-      }
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Failed to send update");
-      }
-
-      setMessages((current) => [...current, data.message]);
-      setNote("");
-      setError(null);
-    } catch (sendError) {
-      setError(sendError instanceof Error ? sendError.message : "Failed to send update");
+      await sendMessage({ label: trimmed });
+      setMessageText("");
     } finally {
       setSending(false);
     }
   };
 
+  const sendQuickTag = async (tag: { kind: string; label: string }) => {
+    if (sendingTag) return;
+    setSendingTag(tag.kind);
+    try {
+      await sendMessage({ tag: tag.kind, label: tag.label });
+    } finally {
+      setSendingTag(null);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{otherDisplayName || "Coordination board"}</Text>
-      {jobTitle ? <Text style={styles.subtitle}>{jobTitle}</Text> : null}
-
-      <View style={styles.nextActionCard}>
-        <Text style={styles.nextActionLabel}>Next action</Text>
-        <Text style={styles.nextActionText}>{nextAction}</Text>
-        {latestCard ? (
-          <Text style={styles.nextActionMeta}>
-            Latest update: {latestCard.label}
-          </Text>
-        ) : null}
+      <View style={styles.header}>
+        <Text style={styles.title}>{otherDisplayName || "Chat"}</Text>
+        {jobTitle ? <Text style={styles.subtitle}>{jobTitle}</Text> : null}
       </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {lastError ? <Text style={styles.error}>{lastError}</Text> : null}
 
       <FlatList
         data={messages}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.timeline}
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
           const card = parseCard(item.text);
           const isMine = item.senderId === clerkUserId;
 
-          return (
-            <View
-              style={[styles.messageRow, isMine ? styles.messageRowMine : styles.messageRowOther]}
-            >
-              {!isMine ? (
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {getInitials(otherDisplayName || item.senderName)}
-                  </Text>
-                </View>
-              ) : null}
-              <View style={[styles.messageCard, isMine ? styles.mine : styles.other]}>
-                <Text style={[styles.meta, isMine ? styles.metaMine : null]}>
-                  {isMine ? "You" : otherDisplayName || item.senderName || "Other user"} ·{" "}
-                  {new Date(item.createdAt).toLocaleString()}
+          if (card?.kind === "application-submitted") {
+            return (
+              <View style={styles.systemPill}>
+                <Ionicons name="briefcase-outline" size={13} color="#64748B" />
+                <Text style={styles.systemPillText}>
+                  {isMine ? "You applied for this job" : `${item.senderName || "A freelancer"} applied for this job`}
+                  {" · "}
+                  {formatTime(item.createdAt)}
                 </Text>
-                <Text style={[styles.messageLabel, isMine ? styles.messageLabelMine : null]}>
-                  {card?.label || "Status update"}
-                </Text>
-                {card?.note ? (
-                  <Text style={[styles.messageNote, isMine ? styles.messageNoteMine : null]}>
-                    {card.note}
-                  </Text>
-                ) : null}
               </View>
+            );
+          }
+
+          const startsGroup = index === 0 || breaksGroup(messages[index - 1], item);
+          const endsGroup =
+            index === messages.length - 1 || breaksGroup(item, messages[index + 1]);
+          const isPlainMessage = !card || card.kind === "message";
+
+          return (
+            <View style={{ marginTop: startsGroup ? 14 : 3 }}>
+              {!isMine && startsGroup ? (
+                <Text style={styles.senderName}>{otherDisplayName || item.senderName || "Other user"}</Text>
+              ) : null}
+
+              <View
+                style={[
+                  styles.messageRow,
+                  isMine ? styles.messageRowMine : styles.messageRowOther,
+                ]}
+              >
+                {!isMine ? (
+                  <View style={styles.avatarSlot}>
+                    {endsGroup ? (
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>
+                          {getInitials(otherDisplayName || item.senderName)}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                <View
+                  style={[
+                    styles.bubble,
+                    isMine ? styles.bubbleMine : styles.bubbleOther,
+                    isPlainMessage ? null : styles.bubbleTag,
+                  ]}
+                >
+                  {isPlainMessage ? (
+                    <Text style={[styles.bubbleText, isMine ? styles.bubbleTextMine : null]}>
+                      {card?.label ?? item.text}
+                    </Text>
+                  ) : (
+                    <View>
+                      <View style={styles.tagRow}>
+                        <Ionicons
+                          name={kindIcon(card!.kind)}
+                          size={14}
+                          color={isMine ? "#FFFFFF" : COLORS.navy}
+                        />
+                        <Text
+                          style={[styles.tagLabel, isMine ? styles.bubbleTextMine : null]}
+                        >
+                          {card!.label}
+                        </Text>
+                      </View>
+                      {card?.note ? (
+                        <Text
+                          style={[styles.tagNote, isMine ? styles.bubbleTextMine : null]}
+                        >
+                          {card.note}
+                        </Text>
+                      ) : null}
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {endsGroup ? (
+                <Text style={[styles.timestamp, isMine ? styles.timestampMine : styles.timestampOther]}>
+                  {formatTime(item.createdAt)}
+                </Text>
+              ) : null}
             </View>
           );
         }}
         ListEmptyComponent={
-          loading ? (
+          loadingHistory ? (
             <ActivityIndicator style={{ marginTop: 28 }} />
           ) : (
             <Text style={styles.empty}>
-              No updates yet. Send the first status card so the client knows what you need next.
+              No messages yet. Say hello or send a quick update below.
             </Text>
           )
         }
       />
 
-      <View style={styles.tagGrid}>
-        {FREELANCER_TAGS.map((tag) => {
-          const active = tag.kind === selectedTag;
-          return (
-            <Pressable
-              key={tag.kind}
-              onPress={() => setSelectedTag(tag.kind)}
-              style={[styles.tagChip, active ? styles.tagChipActive : null]}
-            >
-              <Text style={[styles.tagChipText, active ? styles.tagChipTextActive : null]}>
-                {tag.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.quickReplies}
+        contentContainerStyle={{ gap: 8, paddingRight: 8 }}
+      >
+        {FREELANCER_TAGS.map((tag) => (
+          <Pressable
+            key={tag.kind}
+            onPress={() => sendQuickTag(tag)}
+            disabled={sendingTag === tag.kind}
+            style={styles.tagChip}
+          >
+            {sendingTag === tag.kind ? (
+              <ActivityIndicator size="small" color={COLORS.navy} />
+            ) : (
+              <>
+                <Ionicons name={tag.icon} size={14} color={COLORS.navy} />
+                <Text style={styles.tagChipText}>{tag.label}</Text>
+              </>
+            )}
+          </Pressable>
+        ))}
+      </ScrollView>
 
       <View style={styles.composer}>
-        <Text style={styles.composerLabel}>Optional context</Text>
         <TextInput
-          value={note}
-          onChangeText={setNote}
-          placeholder={`Add a short note for "${activeTag.label}"`}
+          value={messageText}
+          onChangeText={setMessageText}
+          placeholder="Message"
           placeholderTextColor="#94A3B8"
           multiline
           style={styles.input}
         />
-        <Pressable onPress={sendCard} style={styles.sendButton} disabled={sending}>
+        <Pressable
+          onPress={sendChatMessage}
+          style={[styles.sendButton, !messageText.trim() ? styles.sendButtonDisabled : null]}
+          disabled={sending || !messageText.trim()}
+        >
           {sending ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.sendButtonText}>Share status</Text>
+            <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
           )}
         </Pressable>
       </View>
@@ -341,66 +290,37 @@ export function ConversationChatScreen({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 12,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  subtitle: {
-    fontSize: 13,
-    color: "#475569",
-    marginTop: 4,
-    marginBottom: 12,
-  },
-  nextActionCard: {
-    backgroundColor: COLORS.navySoft,
-    borderWidth: 1,
-    borderColor: COLORS.borderSoft,
-    borderRadius: RADIUS.lg,
-    padding: 16,
-    marginBottom: 12,
-  },
-  nextActionLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    color: COLORS.navy,
-    marginBottom: 6,
-  },
-  nextActionText: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: "#0F172A",
-    fontWeight: "600",
-  },
-  nextActionMeta: {
-    marginTop: 8,
-    fontSize: 12,
-    color: "#475569",
-  },
-  error: {
-    color: "#DC2626",
-    marginBottom: 10,
-  },
-  timeline: {
-    paddingBottom: 12,
-  },
-  messageRow: {
+  container: { flex: 1, paddingTop: 12 },
+  header: { marginBottom: 8 },
+  title: { fontSize: 20, fontWeight: "700", color: "#0F172A" },
+  subtitle: { fontSize: 13, color: "#64748B", marginTop: 2 },
+  error: { color: "#DC2626", marginBottom: 10 },
+  timeline: { paddingBottom: 12, flexGrow: 1 },
+
+  systemPill: {
+    alignSelf: "center",
     flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
-    marginBottom: 10,
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginVertical: 10,
   },
-  messageRowMine: {
-    justifyContent: "flex-end",
+  systemPillText: { fontSize: 12, color: "#64748B", fontWeight: "500" },
+
+  senderName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#94A3B8",
+    marginLeft: 40,
+    marginBottom: 4,
   },
-  messageRowOther: {
-    justifyContent: "flex-start",
-  },
+  messageRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
+  messageRowMine: { justifyContent: "flex-end" },
+  messageRowOther: { justifyContent: "flex-start" },
+  avatarSlot: { width: 28, alignItems: "center" },
   avatar: {
     width: 28,
     height: 28,
@@ -409,111 +329,62 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: COLORS.navy,
-  },
-  messageCard: {
-    maxWidth: "78%",
-    borderRadius: RADIUS.lg,
-    padding: 14,
-    borderWidth: 1,
-  },
-  mine: {
-    backgroundColor: COLORS.navy,
-    borderColor: COLORS.navy,
-  },
-  other: {
-    backgroundColor: "#FFFFFF",
-    borderColor: COLORS.border,
-  },
-  meta: {
-    fontSize: 11,
-    color: "#64748B",
-    marginBottom: 6,
-  },
-  metaMine: {
-    color: "rgba(255,255,255,0.75)",
-  },
-  messageLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  messageLabelMine: {
-    color: "#FFFFFF",
-  },
-  messageNote: {
-    marginTop: 6,
-    fontSize: 13,
-    lineHeight: 18,
-    color: "#475569",
-  },
-  messageNoteMine: {
-    color: "rgba(255,255,255,0.85)",
-  },
-  empty: {
-    textAlign: "center",
-    color: "#64748B",
-    marginTop: 28,
-    lineHeight: 20,
-  },
-  tagGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
+  avatarText: { fontSize: 10, fontWeight: "700", color: COLORS.navy },
+
+  bubble: { maxWidth: "76%", borderRadius: RADIUS.lg, paddingHorizontal: 14, paddingVertical: 10 },
+  bubbleMine: { backgroundColor: COLORS.navy },
+  bubbleOther: { backgroundColor: COLORS.surfaceMuted },
+  bubbleTag: { borderWidth: 1, borderColor: COLORS.borderSoft },
+  bubbleText: { fontSize: 15, lineHeight: 21, color: "#0F172A" },
+  bubbleTextMine: { color: "#FFFFFF" },
+
+  tagRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  tagLabel: { fontSize: 14, fontWeight: "700", color: "#0F172A" },
+  tagNote: { marginTop: 4, fontSize: 13, lineHeight: 18, color: "#475569" },
+
+  timestamp: { fontSize: 11, color: "#94A3B8", marginTop: 3 },
+  timestampMine: { alignSelf: "flex-end", marginRight: 2 },
+  timestampOther: { alignSelf: "flex-start", marginLeft: 40 },
+
+  empty: { textAlign: "center", color: "#64748B", marginTop: 28, lineHeight: 20 },
+
+  quickReplies: { flexGrow: 0, marginBottom: 8 },
   tagChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     backgroundColor: COLORS.surfaceMuted,
     borderRadius: RADIUS.pill,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  tagChipActive: {
-    backgroundColor: COLORS.navy,
-  },
-  tagChipText: {
-    color: "#334155",
-    fontWeight: "600",
-    fontSize: 12,
-  },
-  tagChipTextActive: {
-    color: "#FFFFFF",
-  },
+  tagChipText: { color: "#334155", fontWeight: "600", fontSize: 12 },
+
   composer: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.lg,
-    padding: 14,
-  },
-  composerLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#475569",
-    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
   },
   input: {
-    minHeight: 76,
+    flex: 1,
+    minHeight: 42,
+    maxHeight: 110,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 14,
-    paddingHorizontal: 12,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#FFFFFF",
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     color: "#0F172A",
-    textAlignVertical: "top",
-    marginBottom: 10,
+    fontSize: 15,
   },
   sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: COLORS.navy,
-    borderRadius: RADIUS.md,
-    paddingVertical: 12,
     alignItems: "center",
+    justifyContent: "center",
   },
-  sendButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-  },
+  sendButtonDisabled: { backgroundColor: "#CBD5E1" },
 });

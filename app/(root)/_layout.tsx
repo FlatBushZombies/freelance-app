@@ -26,14 +26,14 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs"
 
 const { width: SCREEN_W } = Dimensions.get("window")
 
-/* ─── Layout constants ─── */
-const ICON_AREA_H = 52   // visible icon row height
+
+const ICON_AREA_H = 52   
 const PILL_W = 52
 const PILL_H = 44
 const NUM_TABS = 4
 const TAB_W = SCREEN_W / NUM_TABS
 
-/* ─── Design tokens ─── */
+
 const C = {
   bg:       "#EEF2F3",
   active:   "#1F3A4A",
@@ -44,7 +44,7 @@ const C = {
   badge:    "#E35D5B",
 }
 
-/* ─── Two-ring loading spinner ─── */
+
 const TwoRingSpinner = ({ size = 40 }: { size?: number }) => {
   const r1 = useSharedValue(0)
   const r2 = useSharedValue(0)
@@ -74,7 +74,6 @@ const TwoRingSpinner = ({ size = 40 }: { size?: number }) => {
   )
 }
 
-/* ─── Icons registry ─── */
 type LucideIcon = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
 const ICONS: Record<string, LucideIcon> = {
   home: Home,
@@ -83,7 +82,7 @@ const ICONS: Record<string, LucideIcon> = {
   train: Zap,
 }
 
-/* ─── Single tab button ─── */
+
 function TabItem({
   route,
   isFocused,
@@ -125,7 +124,7 @@ function TabItem({
   )
 }
 
-/* ─── Liquid tab bar (Whop-inspired flat style) ─── */
+
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets()
   const { unreadCount } = useNotifications()
@@ -150,10 +149,10 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
       style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 8) }]}
       pointerEvents="box-none"
     >
-      {/* Sliding pill */}
+      
       <Animated.View style={[styles.pill, pillStyle]} />
 
-      {/* Tab icons */}
+      
       <View style={styles.tabRow}>
         {state.routes.map((route, index) => (
           <TabItem
@@ -171,7 +170,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   )
 }
 
-/* ─── Root layout ─── */
+
 export default function Layout() {
   const { isLoaded, isSignedIn } = useUser()
   const [navReady, setNavReady] = useState(false)
@@ -222,7 +221,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.4,
   },
-  /* Full-width flat bar — Whop style */
   bar: {
     position: "absolute",
     bottom: 0,
@@ -248,7 +246,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  /* Liquid pill indicator */
+  
   pill: {
     position: "absolute",
     top: (ICON_AREA_H - PILL_H) / 2,

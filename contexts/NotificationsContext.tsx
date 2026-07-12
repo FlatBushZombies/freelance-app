@@ -12,6 +12,8 @@ export interface Notification {
   jobId: number;
   message: string;
   read: boolean;
+  type?: string | null;
+  conversationId?: string | null;
   createdAt: string;
 }
 

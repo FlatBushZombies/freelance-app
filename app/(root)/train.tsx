@@ -71,7 +71,7 @@ export default function Train() {
       contentContainerStyle={{ paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* ── Filter Tabs ── */}
+
       <View className="flex-row items-center gap-2 px-5 pt-14 pb-4">
         <View
           className="px-4 py-2 rounded-full flex-row items-center gap-1.5"

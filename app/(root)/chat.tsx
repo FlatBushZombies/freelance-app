@@ -30,7 +30,7 @@ type ConversationRow = {
   } | null;
 };
 
-/* ─── Team Quickhands pinned welcome item ─── */
+
 const TEAM_QH_ITEM = {
   conversationId: "__team_qh__",
   jobTitle: "Welcome to Quickhands",
@@ -54,7 +54,6 @@ const formatTime = (iso: string | null) => {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 };
 
-/* ─── Conversation row ─── */
 const ConvoRow = ({
   item,
   onPress,
@@ -68,7 +67,6 @@ const ConvoRow = ({
 
   return (
     <Pressable style={styles.row} onPress={onPress} android_ripple={null}>
-      {/* Avatar */}
       <View style={[styles.avatar, isPinned && styles.avatarPinned]}>
         <Text style={[styles.avatarText, isPinned && styles.avatarTextPinned]}>
           {initials}
@@ -76,7 +74,6 @@ const ConvoRow = ({
         {isPinned && <View style={styles.verifiedDot} />}
       </View>
 
-      {/* Content */}
       <View style={styles.rowBody}>
         <View style={styles.rowTop}>
           <Text style={styles.rowName} numberOfLines={1}>
@@ -92,7 +89,6 @@ const ConvoRow = ({
   );
 };
 
-/* ─── Filter pill ─── */
 const FilterPill = ({
   label,
   active,
@@ -164,7 +160,6 @@ export default function ChatUsersScreen() {
     });
   };
 
-  /* ── Conversation detail view ── */
   if (conversationId) {
     if (!isLoaded || !isSignedIn || !userId) {
       return (
@@ -177,7 +172,6 @@ export default function ChatUsersScreen() {
 
     return (
       <View style={[styles.container, { paddingTop: 0 }]}>
-        {/* Conversation header */}
         <View style={[styles.detailHeader, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity
             onPress={() => router.replace("/(root)/chat")}
@@ -205,12 +199,10 @@ export default function ChatUsersScreen() {
     );
   }
 
-  /* ── Board list view ── */
   const topPad = insets.top + (Platform.OS === "android" ? 12 : 0);
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Boards</Text>
         <Pressable style={styles.headerIcon} android_ripple={null}>
@@ -218,7 +210,6 @@ export default function ChatUsersScreen() {
         </Pressable>
       </View>
 
-      {/* Search */}
       <View style={styles.searchWrap}>
         <Search size={16} color={COLORS.textMuted} strokeWidth={2} style={styles.searchIcon} />
         <TextInput
@@ -230,16 +221,13 @@ export default function ChatUsersScreen() {
         />
       </View>
 
-      {/* Filter pills */}
       <View style={styles.filters}>
         <FilterPill label="All" active={activeFilter === "all"} onPress={() => setActiveFilter("all")} />
         <FilterPill label="Active" active={activeFilter === "active"} onPress={() => setActiveFilter("active")} />
       </View>
 
-      {/* Error */}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      {/* List */}
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator color={COLORS.navy} />
@@ -288,7 +276,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  /* Header */
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -311,7 +298,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  /* Search */
+
   searchWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -332,7 +319,6 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
 
-  /* Filter pills */
   filters: {
     flexDirection: "row",
     paddingHorizontal: 16,
@@ -357,7 +343,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
-  /* List */
   listContent: {
     paddingHorizontal: 16,
     paddingTop: 8,
@@ -369,7 +354,6 @@ const styles = StyleSheet.create({
     marginLeft: 72,
   },
 
-  /* Conversation row */
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -432,7 +416,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  /* Detail view header */
   detailHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -462,7 +445,6 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  /* Empty / error / misc */
   helper: {
     color: "#64748B",
     fontSize: 13,
