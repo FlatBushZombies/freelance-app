@@ -6,7 +6,7 @@ import { router } from "expo-router"
 import { useSession, useAuth } from "@clerk/clerk-expo"
 import { Feather } from "@expo/vector-icons"
 import { IMAGES } from "@/constants"
-import { SplashScreen } from "@/components/SplashScreen"
+import { SplashScreen, DotSpinner } from "@/components/SplashScreen"
 import { getApiUrl } from "@/lib/fetch"
 
 export default function Index() {
@@ -70,7 +70,7 @@ export default function Index() {
   if (isSignedIn) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#2D4A6A" />
+        <DotSpinner />
         <Text className="font-quicksand-medium text-gray-400 text-sm mt-4 tracking-[0.5px]">
           Redirecting...
         </Text>

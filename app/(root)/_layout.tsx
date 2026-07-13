@@ -3,47 +3,58 @@
 import { useEffect, useState } from "react"
 import { Tabs, router } from "expo-router"
 import {
-  Dimensions,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native"
 import { useUser } from "@clerk/clerk-expo"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Home, MessageCircle, User, Zap } from "lucide-react-native"
+import {
+  AcademicCapIcon,
+  ChatBubbleLeftRightIcon,
+  HomeIcon,
+  UserIcon,
+} from "react-native-heroicons/outline"
+import {
+  AcademicCapIcon as AcademicCapSolid,
+  ChatBubbleLeftRightIcon as ChatSolid,
+  HomeIcon as HomeSolid,
+  UserIcon as UserSolid,
+} from "react-native-heroicons/solid"
 import { useNotifications } from "@/contexts/NotificationsContext"
+import { COLORS } from "@/constants/theme"
 import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
-  withSpring,
   withTiming,
 } from "react-native-reanimated"
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs"
 
-const { width: SCREEN_W } = Dimensions.get("window")
-
-
-const ICON_AREA_H = 52   
-const PILL_W = 52
-const PILL_H = 44
-const NUM_TABS = 4
-const TAB_W = SCREEN_W / NUM_TABS
-
+// @callstack/liquid-glass is iOS 26+ only. Import conditionally so
+// the app doesn't crash on Android, older iOS, or Expo Go where the
+// native module isn't linked.
+let LiquidGlassView: any = null
+let isLiquidGlassSupported = false
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const lg = require("@callstack/liquid-glass")
+  LiquidGlassView = lg.LiquidGlassView
+  isLiquidGlassSupported = lg.isLiquidGlassSupported ?? false
+} catch {}
 
 const C = {
   bg:       "#EEF2F3",
-  active:   "#1F3A4A",
-  pill:     "#EBEBED",
+  active:   COLORS.navyDark,
   inactive: "#A8B4BD",
   surface:  "#FFFFFF",
-  border:   "#E5E7EB",
   badge:    "#E35D5B",
 }
 
+const ICON_SIZE = 22
 
 const TwoRingSpinner = ({ size = 40 }: { size?: number }) => {
   const r1 = useSharedValue(0)
@@ -74,102 +85,100 @@ const TwoRingSpinner = ({ size = 40 }: { size?: number }) => {
   )
 }
 
-type LucideIcon = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
-const ICONS: Record<string, LucideIcon> = {
-  home: Home,
-  chat: MessageCircle,
-  profile: User,
-  train: Zap,
+type RouteConfig = {
+  name: string
+  OutlineIcon: React.ElementType
+  SolidIcon: React.ElementType
+  label: string
+  hasBadge?: boolean
 }
 
+const ROUTE_CONFIG: RouteConfig[] = [
+  { name: "home",    OutlineIcon: HomeIcon,                SolidIcon: HomeSolid,        label: "Home"     },
+  { name: "chat",    OutlineIcon: ChatBubbleLeftRightIcon, SolidIcon: ChatSolid,        label: "Chat",    hasBadge: true },
+  { name: "profile", OutlineIcon: UserIcon,                SolidIcon: UserSolid,        label: "Profile"  },
+  { name: "train",   OutlineIcon: AcademicCapIcon,         SolidIcon: AcademicCapSolid, label: "Training" },
+]
 
-function TabItem({
-  route,
-  isFocused,
-  onPress,
-  badgeCount = 0,
-}: {
-  route: { name: string; key: string }
-  isFocused: boolean
-  onPress: () => void
-  badgeCount?: number
-}) {
-  const Icon = ICONS[route.name] ?? Home
-  const scale = useSharedValue(isFocused ? 1.08 : 1)
-
-  useEffect(() => {
-    scale.value = withSpring(isFocused ? 1.08 : 1, { damping: 14, stiffness: 260 })
-  }, [isFocused])
-
-  const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }))
-
-  return (
-    <Pressable style={styles.tabItem} onPress={onPress} android_ripple={null}>
-      <Animated.View style={anim}>
-        <Icon
-          size={22}
-          color={isFocused ? C.active : C.inactive}
-          strokeWidth={isFocused ? 2.3 : 1.8}
-        />
-      </Animated.View>
-
-      {badgeCount > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>
-            {badgeCount > 99 ? "99+" : String(badgeCount)}
-          </Text>
-        </View>
-      )}
-    </Pressable>
-  )
-}
-
-
-function CustomTabBar({ state, navigation }: BottomTabBarProps) {
+function GlassTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets()
   const { unreadCount } = useNotifications()
 
-  const pillX = useSharedValue(
-    state.index * TAB_W + (TAB_W - PILL_W) / 2
-  )
+  const useGlass = Platform.OS === "ios" && isLiquidGlassSupported && LiquidGlassView !== null
 
-  useEffect(() => {
-    pillX.value = withSpring(
-      state.index * TAB_W + (TAB_W - PILL_W) / 2,
-      { damping: 22, stiffness: 300, mass: 0.8 }
+  const tabItems = ROUTE_CONFIG.map((config) => {
+    const route = state.routes.find((r) => r.name === config.name)
+    if (!route) return null
+    const routeIndex = state.routes.indexOf(route)
+    const focused = state.index === routeIndex
+    const Icon = focused ? config.SolidIcon : config.OutlineIcon
+    const badgeCount = config.hasBadge ? unreadCount : 0
+
+    const onPress = () => {
+      const event = navigation.emit({
+        type: "tabPress",
+        target: route.key,
+        canPreventDefault: true,
+      })
+      if (!focused && !event.defaultPrevented) {
+        navigation.navigate(route.name)
+      }
+    }
+
+    return (
+      <TouchableOpacity
+        key={route.key}
+        onPress={onPress}
+        activeOpacity={0.7}
+        style={styles.tabItem}
+      >
+        <View style={styles.iconWrap}>
+          <Icon
+            size={ICON_SIZE}
+            color={focused ? C.active : C.inactive}
+            strokeWidth={focused ? 2.1 : 1.8}
+          />
+          {badgeCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {badgeCount > 99 ? "99+" : String(badgeCount)}
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={[styles.label, focused && styles.labelActive]}>
+          {config.label}
+        </Text>
+      </TouchableOpacity>
     )
-  }, [state.index])
+  })
 
-  const pillStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: pillX.value }],
-  }))
+  const pillContent = <View style={styles.tabRow}>{tabItems}</View>
 
   return (
     <View
-      style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 8) }]}
+      style={[
+        styles.outerWrap,
+        { paddingBottom: Math.max(insets.bottom, 10) },
+      ]}
       pointerEvents="box-none"
     >
-      
-      <Animated.View style={[styles.pill, pillStyle]} />
-
-      
-      <View style={styles.tabRow}>
-        {state.routes.map((route, index) => (
-          <TabItem
-            key={route.key}
-            route={route}
-            isFocused={state.index === index}
-            onPress={() => {
-              if (state.index !== index) navigation.navigate(route.name)
-            }}
-            badgeCount={route.name === "chat" ? unreadCount : 0}
-          />
-        ))}
-      </View>
+      {useGlass ? (
+        <LiquidGlassView
+          style={styles.pill}
+          effect="regular"
+          interactive
+        >
+          {pillContent}
+        </LiquidGlassView>
+      ) : (
+        <View style={[styles.pill, styles.pillFallback]}>
+          {pillContent}
+        </View>
+      )}
     </View>
   )
 }
-
 
 export default function Layout() {
   const { isLoaded, isSignedIn } = useUser()
@@ -197,7 +206,7 @@ export default function Layout() {
   return (
     <Tabs
       screenOptions={{ headerShown: false }}
-      tabBar={(props) => <CustomTabBar {...props} />}
+      tabBar={(props) => <GlassTabBar {...props} />}
     >
       <Tabs.Screen name="home" />
       <Tabs.Screen name="chat" />
@@ -221,49 +230,56 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.4,
   },
-  bar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: C.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: C.border,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 10,
+  outerWrap: {
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    backgroundColor: "transparent",
+  },
+  pill: {
+    borderRadius: 36,
+    overflow: "hidden",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.14,
+        shadowRadius: 24,
+      },
+      android: {
+        elevation: 12,
+      },
+    }),
+  },
+  pillFallback: {
+    backgroundColor: Platform.OS === "ios"
+      ? "rgba(252,252,252,0.91)"
+      : "rgba(255,255,255,0.97)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.055)",
   },
   tabRow: {
     flexDirection: "row",
-    height: ICON_AREA_H,
-    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   tabItem: {
     flex: 1,
-    height: ICON_AREA_H,
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 11,
+    gap: 4,
   },
-  
-  pill: {
-    position: "absolute",
-    top: (ICON_AREA_H - PILL_H) / 2,
-    left: 0,
-    width: PILL_W,
-    height: PILL_H,
-    borderRadius: 22,
-    backgroundColor: C.pill,
+  iconWrap: {
+    position: "relative",
   },
   badge: {
     position: "absolute",
-    top: 8,
-    right: "18%",
-    minWidth: 16,
-    height: 16,
+    top: -4,
+    right: -7,
+    minWidth: 17,
+    height: 17,
     paddingHorizontal: 3,
-    borderRadius: 8,
+    borderRadius: 8.5,
     backgroundColor: C.badge,
     alignItems: "center",
     justifyContent: "center",
@@ -272,8 +288,19 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "#fff",
-    fontSize: 8,
-    fontWeight: "700",
-    lineHeight: 10,
+    fontSize: 9,
+    lineHeight: 11,
+    fontFamily: "Quicksand-Bold",
+  },
+  label: {
+    fontSize: 10,
+    lineHeight: 13,
+    letterSpacing: 0.22,
+    fontFamily: "Quicksand-Medium",
+    color: C.inactive,
+  },
+  labelActive: {
+    fontFamily: "Quicksand-Bold",
+    color: C.active,
   },
 })

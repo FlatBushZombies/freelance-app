@@ -6,6 +6,7 @@ import Toast from "react-native-toast-message";
 import { ClerkProvider, useAuth, useUser } from "@clerk/clerk-expo";
 
 import "./globals.css";
+import { tokenCache } from "@/lib/auth";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { toastConfig } from "@/components/Toast";
 import {
@@ -78,7 +79,7 @@ export default function RootLayout() {
   }, [fontsLoaded, error]);
 
   return (
-    <ClerkProvider publishableKey={publishableKey}>
+    <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
       <NotificationsProvider>
         <PushNotificationRegistration />
         <Stack screenOptions={{ headerShown: false }} />

@@ -12,6 +12,7 @@ import {
   RefreshControl,
 } from "react-native"
 import { BellAlertIcon, BellIcon, XMarkIcon } from "react-native-heroicons/outline"
+import { Ionicons } from "@expo/vector-icons"
 import { useNotifications } from "@/contexts/NotificationsContext"
 import { COLORS } from "@/constants/theme"
 import { navigateForNotificationData } from "@/lib/pushNotifications"
@@ -44,6 +45,27 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
     if (diffInHours > 0) return `${diffInHours}h ago`
     if (diffInMinutes > 0) return `${diffInMinutes}m ago`
     return "Just now"
+  }
+
+  const getNotificationIcon = (message: string) => {
+    const normalized = message.toLowerCase()
+
+    if (normalized.includes("in your area")) {
+      return { name: "location" as const, color: "#15803D", bg: "#DCFCE7" }
+    }
+    if (normalized.includes("applied")) {
+      return { name: "person-add" as const, color: "#3B82F6", bg: "#DBEAFE" }
+    }
+    if (normalized.includes("accepted")) {
+      return { name: "checkmark-circle" as const, color: "#10B981", bg: "#D1FAE5" }
+    }
+    if (normalized.includes("rejected")) {
+      return { name: "close-circle" as const, color: "#EF4444", bg: "#FEE2E2" }
+    }
+    if (normalized.includes("phone number") || normalized.includes("contact")) {
+      return { name: "call" as const, color: "#0EA5E9", bg: "#E0F2FE" }
+    }
+    return { name: "notifications" as const, color: "#6366F1", bg: "#E0E7FF" }
   }
 
   const getNotificationCopy = (message: string) => {
@@ -109,6 +131,7 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
 
   const renderNotification = ({ item }: { item: any }) => {
     const copy = getNotificationCopy(item.message)
+    const iconData = getNotificationIcon(item.message)
     const showAreaBadge = item.message.toLowerCase().includes("in your area")
 
     return (
@@ -139,17 +162,16 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
           <View
             style={{
-              minWidth: 48,
+              width: 48,
               height: 48,
               borderRadius: 24,
-              backgroundColor: copy.bg,
+              backgroundColor: iconData.bg,
               alignItems: "center",
               justifyContent: "center",
               marginRight: 12,
-              paddingHorizontal: 10,
             }}
           >
-            <Text style={{ fontSize: 11, fontWeight: "700", color: copy.color }}>{copy.chip}</Text>
+            <Ionicons name={iconData.name} size={24} color={iconData.color} />
           </View>
 
           <View style={{ flex: 1 }}>
@@ -184,7 +206,10 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
               </View>
             ) : null}
 
-            <Text style={{ fontSize: 13, color: "#6B7280" }}>{formatTimeAgo(item.createdAt)}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Ionicons name="time-outline" size={14} color="#9CA3AF" />
+              <Text style={{ fontSize: 13, color: "#6B7280" }}>{formatTimeAgo(item.createdAt)}</Text>
+            </View>
           </View>
 
           {!item.read && (

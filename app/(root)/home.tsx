@@ -10,7 +10,7 @@ import { fetchAPI, getApiUrl } from "@/lib/fetch"
 import { waitForClerkToken } from "@/lib/session"
 import { useAuth, useUser } from "@clerk/clerk-expo"
 import { router } from "expo-router"
-import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type ComponentType } from "react"
+import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type ComponentProps } from "react"
 import * as Location from "expo-location"
 import {
   ActivityIndicator,
@@ -27,22 +27,7 @@ import {
   View,
 } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
-import {
-  Briefcase,
-  Clock,
-  Hammer,
-  MapPin,
-  PaintRoller,
-  Search,
-  ShieldCheck,
-  SlidersHorizontal,
-  Sparkles,
-  Star,
-  Wallet,
-  Wrench,
-  X,
-  Zap,
-} from "lucide-react-native"
+import { Ionicons } from "@expo/vector-icons"
 import { COLORS, RADIUS, SHADOW } from "@/constants/theme"
 
 const FALLBACK_AVATAR = require("../../assets/images/quickhands.png")
@@ -91,28 +76,24 @@ const SORT_OPTIONS = [
   { key: "client_rating", label: "Best clients" },
 ]
 
-type CategoryIconComponent = ComponentType<{
-  size?: number
-  color?: string
-  strokeWidth?: number
-}>
+type CategoryIconName = ComponentProps<typeof Ionicons>["name"]
 
-// Maps the same category names used in SERVICE_FILTERS to a lucide line icon
-// for the job-card category chip. Falls back to Wrench for anything else.
-const CATEGORY_ICONS: Record<string, CategoryIconComponent> = {
-  Plumbing: Wrench,
-  Electrical: Zap,
-  Cleaning: Sparkles,
-  Painting: PaintRoller,
-  Repair: Hammer,
+// Maps the same category names used in SERVICE_FILTERS to an Ionicons glyph
+// for the job-card category chip. Falls back to construct-outline for anything else.
+const CATEGORY_ICONS: Record<string, CategoryIconName> = {
+  Plumbing: "construct-outline",
+  Electrical: "flash-outline",
+  Cleaning: "sparkles",
+  Painting: "brush-outline",
+  Repair: "hammer-outline",
 }
 
-function getCategoryIcon(job: Job): CategoryIconComponent {
+function getCategoryIcon(job: Job): CategoryIconName {
   const source = `${job.category} ${job.selectedServices.join(" ")} ${job.title}`.toLowerCase()
   const matched = SERVICE_FILTERS.find(
     (service) => service !== "All" && source.includes(service.toLowerCase())
   )
-  return (matched && CATEGORY_ICONS[matched]) || Wrench
+  return (matched && CATEGORY_ICONS[matched]) || "construct-outline"
 }
 
 function timeAgo(date: string) {
@@ -672,7 +653,7 @@ const Home = () => {
             Your lane
           </Text>
           <View className="mt-2 flex-row items-center gap-2">
-            <MapPin size={18} color="#FFFFFF" strokeWidth={2} />
+            <Ionicons name="location-outline" size={18} color="#FFFFFF" />
             <Text className="flex-1 text-2xl font-bold text-white">
               {nearbyLocation.label || "Refresh your area"}
             </Text>
@@ -685,14 +666,14 @@ const Home = () => {
           <View className="mt-4 flex-row gap-3">
             <View className="flex-1 rounded-[22px] bg-white/10 px-4 py-4">
               <View className="flex-row items-center gap-2">
-                <Briefcase size={15} color="#B8C9D4" strokeWidth={2} />
+                <Ionicons name="briefcase-outline" size={15} color="#B8C9D4" />
                 <Text className="text-2xl font-bold text-white">{nearbyJobsCount}</Text>
               </View>
               <Text className="mt-1 text-xs uppercase tracking-[1px] text-[#B8C9D4]">Nearby jobs</Text>
             </View>
             <View className="flex-1 rounded-[22px] bg-white/10 px-4 py-4">
               <View className="flex-row items-center gap-2">
-                <ShieldCheck size={15} color="#B8C9D4" strokeWidth={2} />
+                <Ionicons name="shield-checkmark-outline" size={15} color="#B8C9D4" />
                 <Text className="text-2xl font-bold text-white">{trustedJobsCount}</Text>
               </View>
               <Text className="mt-1 text-xs uppercase tracking-[1px] text-[#B8C9D4]">Trusted clients</Text>
@@ -726,7 +707,7 @@ const Home = () => {
 
           <View style={homeStyles.searchWrap}>
             <View style={homeStyles.searchIcon} pointerEvents="none">
-              <Search size={18} color={COLORS.textMuted} strokeWidth={2} />
+              <Ionicons name="search-outline" size={18} color={COLORS.textMuted} />
             </View>
             <TextInput
               value={searchQuery}
@@ -761,7 +742,7 @@ const Home = () => {
             onPress={() => setFiltersVisible(true)}
             style={homeStyles.filtersButton}
           >
-            <SlidersHorizontal size={16} color={COLORS.navy} strokeWidth={2} />
+            <Ionicons name="options-outline" size={16} color={COLORS.navy} />
             <Text style={homeStyles.filtersButtonText}>Filters</Text>
           </TouchableOpacity>
         </View>
@@ -805,14 +786,14 @@ const Home = () => {
                     job.clientReviewCount === 1 ? "" : "s"
                   }`
                 : "New client"
-            const CategoryIcon = getCategoryIcon(job)
+            const categoryIconName = getCategoryIcon(job)
 
             return (
               <View key={job.id} className="mb-4 rounded-[30px] border border-[#DCE6EA] bg-white px-5 py-5">
                 <View className="flex-row flex-wrap items-center gap-1.5">
                   {job.inYourArea ? (
                     <View className="flex-row items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1">
-                      <MapPin size={11} color={COLORS.success} strokeWidth={2} />
+                      <Ionicons name="location-outline" size={11} color={COLORS.success} />
                       <Text className="text-[10px] font-bold uppercase tracking-[1px] text-emerald-700">
                         Nearby
                       </Text>
@@ -820,14 +801,14 @@ const Home = () => {
                   ) : null}
                   {job.isMatch ? (
                     <View className="flex-row items-center gap-1 rounded-full bg-[#EEF3F8] px-2.5 py-1">
-                      <Sparkles size={11} color={COLORS.navy} strokeWidth={2} />
+                      <Ionicons name="sparkles" size={11} color={COLORS.navy} />
                       <Text className="text-[10px] font-bold uppercase tracking-[1px] text-[#2D4A6A]">
                         Matched
                       </Text>
                     </View>
                   ) : null}
                   <View className="flex-row items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
-                    <Clock size={11} color={COLORS.textSecondary} strokeWidth={2} />
+                    <Ionicons name="time-outline" size={11} color={COLORS.textSecondary} />
                     <Text className="text-[10px] font-bold uppercase tracking-[1px] text-slate-500">
                       {timeAgo(job.createdAt)}
                     </Text>
@@ -836,13 +817,13 @@ const Home = () => {
 
                 <View className="mt-3 flex-row items-start gap-3">
                   <View style={homeStyles.categoryChip}>
-                    <CategoryIcon size={18} color={COLORS.navy} strokeWidth={1.9} />
+                    <Ionicons name={categoryIconName} size={18} color={COLORS.navy} />
                   </View>
                   <Text className="flex-1 text-[19px] font-bold leading-7 text-slate-950">{job.title}</Text>
                   <View className="items-end">
                     <Text className="text-[10px] font-bold uppercase tracking-[1px] text-slate-400">Budget</Text>
                     <View className="mt-1 flex-row items-center gap-1.5">
-                      <Wallet size={16} color={COLORS.navy} strokeWidth={1.9} />
+                      <Ionicons name="wallet-outline" size={16} color={COLORS.navy} />
                       <Text className="text-lg font-bold text-slate-950">US${job.budget.toFixed(0)}</Text>
                     </View>
                   </View>
@@ -851,7 +832,7 @@ const Home = () => {
                 <View className="mt-2 flex-row flex-wrap items-center">
                   <Text className="text-sm leading-6 text-slate-500">{job.clientName}</Text>
                   <Text className="text-sm leading-6 text-slate-400"> · </Text>
-                  <MapPin size={13} color={COLORS.textMuted} strokeWidth={2} />
+                  <Ionicons name="location-outline" size={13} color={COLORS.textMuted} />
                   <Text className="text-sm leading-6 text-slate-500"> {job.location}</Text>
                   {job.distanceKm != null ? (
                     <Text className="text-sm leading-6 text-slate-500"> · {job.distanceKm.toFixed(1)} km away</Text>
@@ -869,7 +850,7 @@ const Home = () => {
                 </View>
 
                 <View className="mt-4 flex-row flex-wrap items-center gap-2">
-                  <Star size={15} color={COLORS.warning} fill={COLORS.warning} strokeWidth={2} />
+                  <Ionicons name="star" size={15} color={COLORS.warning} />
                   <Text className="text-[10px] font-bold uppercase tracking-[1px] text-slate-400">
                     Client trust
                   </Text>
@@ -921,7 +902,7 @@ const Home = () => {
                 onPress={() => setFiltersVisible(false)}
                 style={homeStyles.sheetClose}
               >
-                <X size={18} color={COLORS.textPrimary} strokeWidth={2} />
+                <Ionicons name="close" size={18} color={COLORS.textPrimary} />
               </TouchableOpacity>
             </View>
 
