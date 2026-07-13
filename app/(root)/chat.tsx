@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -15,6 +16,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { ConversationChatScreen, getInitials } from "@/components/messaging/ConversationChatScreen";
 import { useMessagingConversations } from "@/hooks/useMessagingConversations";
 import { API_BASE_URL } from "@/lib/fetch";
+import { parseCard } from "@/lib/messageCards";
 import { COLORS, RADIUS } from "@/constants/theme";
 import { Search, PenSquare, ChevronLeft } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -82,7 +84,7 @@ const ConvoRow = ({
           <Text style={styles.rowTime}>{formatTime(item.lastMessageAt)}</Text>
         </View>
         <Text style={styles.rowPreview} numberOfLines={1}>
-          {item.lastMessageText || item.jobTitle || "No messages yet"}
+          {parseCard(item.lastMessageText || "")?.label || item.lastMessageText || item.jobTitle || "No messages yet"}
         </Text>
       </View>
     </Pressable>
@@ -171,7 +173,10 @@ export default function ChatUsersScreen() {
     }
 
     return (
-      <View style={[styles.container, { paddingTop: 0 }]}>
+      <KeyboardAvoidingView
+        style={[styles.container, { paddingTop: 0 }]}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <View style={[styles.detailHeader, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity
             onPress={() => router.replace("/(root)/chat")}
@@ -195,7 +200,7 @@ export default function ChatUsersScreen() {
           otherDisplayName={otherDisplayName}
           jobTitle={jobTitle}
         />
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 

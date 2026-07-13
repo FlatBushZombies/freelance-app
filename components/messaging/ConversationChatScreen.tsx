@@ -11,7 +11,9 @@ import {
 } from "react-native";
 import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { API_BASE_URL } from "@/lib/fetch";
+import { parseCard } from "@/lib/messageCards";
 import { useMessagingSocket, type ServerMessage } from "@/hooks/useMessagingSocket";
 import { COLORS, RADIUS } from "@/constants/theme";
 
@@ -30,34 +32,12 @@ type Props = {
   jobTitle?: string;
 };
 
-type ParsedCard = {
-  kind: string;
-  label: string;
-  note: string | null;
-};
-
 export function getInitials(name?: string) {
   const trimmed = (name || "").trim();
   if (!trimmed) return "?";
   const parts = trimmed.split(/\s+/).filter(Boolean);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-function parseCard(text: string): ParsedCard | null {
-  const normalized = String(text || "").trim();
-  if (!normalized.startsWith("QH_CARD::")) return null;
-  try {
-    const parsed = JSON.parse(normalized.slice("QH_CARD::".length));
-    if (!parsed?.label) return null;
-    return {
-      kind: String(parsed.kind || "update"),
-      label: String(parsed.label),
-      note: parsed.note ? String(parsed.note) : null,
-    };
-  } catch {
-    return null;
-  }
 }
 
 function formatTime(iso: string) {
@@ -90,6 +70,7 @@ export function ConversationChatScreen({
   jobTitle,
 }: Props) {
   const { getToken } = useAuth();
+  const insets = useSafeAreaInsets();
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
   const [sendingTag, setSendingTag] = useState<string | null>(null);
@@ -264,7 +245,7 @@ export function ConversationChatScreen({
         ))}
       </ScrollView>
 
-      <View style={styles.composer}>
+      <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         <TextInput
           value={messageText}
           onChangeText={setMessageText}

@@ -7,14 +7,17 @@ import {
   type ApplicationRadarItem,
 } from "@/components/ApplicationRadar"
 import { fetchAPI, getApiUrl } from "@/lib/fetch"
+import { waitForClerkToken } from "@/lib/session"
 import { useAuth, useUser } from "@clerk/clerk-expo"
 import { router } from "expo-router"
-import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
+import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type ComponentType } from "react"
 import * as Location from "expo-location"
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -23,6 +26,24 @@ import {
   TouchableOpacity,
   View,
 } from "react-native"
+import { LinearGradient } from "expo-linear-gradient"
+import {
+  Briefcase,
+  Clock,
+  Hammer,
+  MapPin,
+  PaintRoller,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  Star,
+  Wallet,
+  Wrench,
+  X,
+  Zap,
+} from "lucide-react-native"
+import { COLORS, RADIUS, SHADOW } from "@/constants/theme"
 
 const FALLBACK_AVATAR = require("../../assets/images/quickhands.png")
 import { SafeAreaView } from "react-native-safe-area-context"
@@ -70,6 +91,30 @@ const SORT_OPTIONS = [
   { key: "client_rating", label: "Best clients" },
 ]
 
+type CategoryIconComponent = ComponentType<{
+  size?: number
+  color?: string
+  strokeWidth?: number
+}>
+
+// Maps the same category names used in SERVICE_FILTERS to a lucide line icon
+// for the job-card category chip. Falls back to Wrench for anything else.
+const CATEGORY_ICONS: Record<string, CategoryIconComponent> = {
+  Plumbing: Wrench,
+  Electrical: Zap,
+  Cleaning: Sparkles,
+  Painting: PaintRoller,
+  Repair: Hammer,
+}
+
+function getCategoryIcon(job: Job): CategoryIconComponent {
+  const source = `${job.category} ${job.selectedServices.join(" ")} ${job.title}`.toLowerCase()
+  const matched = SERVICE_FILTERS.find(
+    (service) => service !== "All" && source.includes(service.toLowerCase())
+  )
+  return (matched && CATEGORY_ICONS[matched]) || Wrench
+}
+
 function timeAgo(date: string) {
   const diffMs = Date.now() - new Date(date).getTime()
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
@@ -77,10 +122,6 @@ function timeAgo(date: string) {
   if (diffHours < 1) return "Just now"
   if (diffHours < 24) return `${diffHours}h ago`
   return `${diffDays}d ago`
-}
-
-function joinMeta(parts: Array<string | null | undefined>) {
-  return parts.filter(Boolean).join(" · ")
 }
 
 const Home = () => {
@@ -104,6 +145,7 @@ const Home = () => {
   const [applicationRadarLoading, setApplicationRadarLoading] = useState(true)
   const [applyingJobs, setApplyingJobs] = useState<Set<string>>(new Set())
   const [modalVisible, setModalVisible] = useState(false)
+  const [filtersVisible, setFiltersVisible] = useState(false)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [nearbyLocation, setNearbyLocation] = useState<NearbyLocationState>({
     loading: false,
@@ -503,7 +545,7 @@ const Home = () => {
     setApplyingJobs((current) => new Set(current).add(selectedJob.id))
 
     try {
-      const token = await getToken()
+      const token = await waitForClerkToken(getToken)
       const response = await fetch(getApiUrl(`/api/jobs/${selectedJob.id}/apply`), {
         method: "POST",
         headers: {
@@ -620,13 +662,21 @@ const Home = () => {
           ) : null}
         </View>
 
-        <View className="mb-4 rounded-[32px] bg-[#2D4A6A] px-5 py-5">
+        <LinearGradient
+          colors={[COLORS.navy, COLORS.navyDark]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={homeStyles.laneCard}
+        >
           <Text className="text-xs font-semibold uppercase tracking-[1px] text-[#B8C9D4]">
             Your lane
           </Text>
-          <Text className="mt-2 text-2xl font-bold text-white">
-            {nearbyLocation.label || "Refresh your area"}
-          </Text>
+          <View className="mt-2 flex-row items-center gap-2">
+            <MapPin size={18} color="#FFFFFF" strokeWidth={2} />
+            <Text className="flex-1 text-2xl font-bold text-white">
+              {nearbyLocation.label || "Refresh your area"}
+            </Text>
+          </View>
           <Text className="mt-2 text-sm leading-6 text-[#D8E8ED]">
             {nearbyLocation.loading
               ? "Refreshing location and ranking the closest jobs."
@@ -634,15 +684,21 @@ const Home = () => {
           </Text>
           <View className="mt-4 flex-row gap-3">
             <View className="flex-1 rounded-[22px] bg-white/10 px-4 py-4">
-              <Text className="text-2xl font-bold text-white">{nearbyJobsCount}</Text>
+              <View className="flex-row items-center gap-2">
+                <Briefcase size={15} color="#B8C9D4" strokeWidth={2} />
+                <Text className="text-2xl font-bold text-white">{nearbyJobsCount}</Text>
+              </View>
               <Text className="mt-1 text-xs uppercase tracking-[1px] text-[#B8C9D4]">Nearby jobs</Text>
             </View>
             <View className="flex-1 rounded-[22px] bg-white/10 px-4 py-4">
-              <Text className="text-2xl font-bold text-white">{trustedJobsCount}</Text>
+              <View className="flex-row items-center gap-2">
+                <ShieldCheck size={15} color="#B8C9D4" strokeWidth={2} />
+                <Text className="text-2xl font-bold text-white">{trustedJobsCount}</Text>
+              </View>
               <Text className="mt-1 text-xs uppercase tracking-[1px] text-[#B8C9D4]">Trusted clients</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         <View className="mb-4 rounded-[28px] border border-[#D8E8ED] bg-white p-4">
           <View className="mb-4 flex-row items-center justify-between">
@@ -668,13 +724,18 @@ const Home = () => {
             </View>
           </View>
 
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search service type or skill"
-            placeholderTextColor="#94A3B8"
-            className="rounded-2xl bg-[#F8FAFC] px-4 py-3 text-slate-900"
-          />
+          <View style={homeStyles.searchWrap}>
+            <View style={homeStyles.searchIcon} pointerEvents="none">
+              <Search size={18} color={COLORS.textMuted} strokeWidth={2} />
+            </View>
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search service type or skill"
+              placeholderTextColor="#94A3B8"
+              className="rounded-2xl bg-[#F8FAFC] py-3 pl-11 pr-4 text-slate-900"
+            />
+          </View>
 
           <View className="mt-4 flex-row flex-wrap gap-2">
             {QUICK_FILTERS.map((filter) => (
@@ -696,91 +757,13 @@ const Home = () => {
             ))}
           </View>
 
-          <View className="mt-4">
-            <Text className="text-xs font-bold uppercase tracking-[1px] text-slate-400">
-              Service
-            </Text>
-            <View className="mt-2 flex-row flex-wrap gap-2">
-              {SERVICE_FILTERS.map((service) => (
-                <TouchableOpacity
-                  key={service}
-                  onPress={() => setSelectedService(service)}
-                  className={`rounded-full px-3 py-2 ${
-                    selectedService === service ? "bg-[#D8E8ED]" : "bg-[#F8FAFC]"
-                  }`}
-                >
-                  <Text className="text-xs font-bold text-slate-700">{service}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View className="mt-4 flex-row gap-3">
-            <View className="flex-1">
-              <Text className="mb-2 text-xs font-bold uppercase tracking-[1px] text-slate-400">
-                Budget cap
-              </Text>
-              <TextInput
-                value={budgetCap}
-                onChangeText={setBudgetCap}
-                placeholder="Any"
-                keyboardType="numeric"
-                placeholderTextColor="#94A3B8"
-                className="rounded-2xl bg-[#F8FAFC] px-4 py-3 text-slate-900"
-              />
-            </View>
-            <View className="flex-1">
-              <Text className="mb-2 text-xs font-bold uppercase tracking-[1px] text-slate-400">
-                Client rating
-              </Text>
-              <TextInput
-                value={minimumClientRating}
-                onChangeText={setMinimumClientRating}
-                placeholder="0"
-                keyboardType="numeric"
-                placeholderTextColor="#94A3B8"
-                className="rounded-2xl bg-[#F8FAFC] px-4 py-3 text-slate-900"
-              />
-            </View>
-          </View>
-
-          <View className="mt-4">
-            <Text className="text-xs font-bold uppercase tracking-[1px] text-slate-400">
-              Sort
-            </Text>
-            <View className="mt-2 flex-row flex-wrap gap-2">
-              {SORT_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.key}
-                  onPress={() => setSortBy(option.key)}
-                  className={`rounded-full px-3 py-2 ${
-                    sortBy === option.key ? "bg-[#2D4A6A]" : "bg-[#F8FAFC]"
-                  }`}
-                >
-                  <Text className={`text-xs font-bold ${sortBy === option.key ? "text-white" : "text-slate-700"}`}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View className="mt-4 rounded-2xl bg-[#F8FAFC] p-4">
-            <Text className="text-sm font-bold text-slate-900">Location ranking</Text>
-            <Text className="mt-2 text-sm leading-6 text-slate-500">
-              {nearbyLocation.loading
-                ? "Detecting your current area..."
-                : nearbyLocation.label || "Allow location to rank jobs closest to you first."}
-            </Text>
-            <TouchableOpacity
-              onPress={() => void loadNearbyLocation()}
-              className="mt-3 self-start rounded-full bg-slate-900 px-4 py-2.5"
-            >
-              <Text className="text-xs font-bold text-white">
-                {nearbyLocation.loading ? "Updating..." : "Refresh area"}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={() => setFiltersVisible(true)}
+            style={homeStyles.filtersButton}
+          >
+            <SlidersHorizontal size={16} color={COLORS.navy} strokeWidth={2} />
+            <Text style={homeStyles.filtersButtonText}>Filters</Text>
+          </TouchableOpacity>
         </View>
 
         <ApplicationRadar
@@ -816,106 +799,225 @@ const Home = () => {
               0,
               3
             )
-            const metaLine = joinMeta([
-              job.clientName,
-              job.location,
-              job.distanceKm != null ? `${job.distanceKm.toFixed(1)} km away` : null,
-            ])
             const trustLabel =
               job.clientRating > 0
                 ? `${job.clientRating.toFixed(1)} stars · ${job.clientReviewCount} review${
                     job.clientReviewCount === 1 ? "" : "s"
                   }`
                 : "New client"
+            const CategoryIcon = getCategoryIcon(job)
 
             return (
               <View key={job.id} className="mb-4 rounded-[30px] border border-[#DCE6EA] bg-white px-5 py-5">
-                <View className="flex-row items-start justify-between gap-3">
-                  <View className="flex-1">
-                    <View className="flex-row flex-wrap gap-2">
-                      {job.inYourArea ? (
-                        <View className="rounded-full bg-emerald-50 px-3 py-1.5">
-                          <Text className="text-[11px] font-bold uppercase tracking-[1px] text-emerald-700">
-                            Nearby
-                          </Text>
-                        </View>
-                      ) : null}
-                      {job.isMatch ? (
-                        <View className="rounded-full bg-[#EEF3F8] px-3 py-1.5">
-                          <Text className="text-[11px] font-bold uppercase tracking-[1px] text-[#2D4A6A]">
-                            Matched
-                          </Text>
-                        </View>
-                      ) : null}
-                      <View className="rounded-full bg-slate-100 px-3 py-1.5">
-                        <Text className="text-[11px] font-bold uppercase tracking-[1px] text-slate-500">
-                          {timeAgo(job.createdAt)}
-                        </Text>
-                      </View>
+                <View className="flex-row flex-wrap items-center gap-1.5">
+                  {job.inYourArea ? (
+                    <View className="flex-row items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1">
+                      <MapPin size={11} color={COLORS.success} strokeWidth={2} />
+                      <Text className="text-[10px] font-bold uppercase tracking-[1px] text-emerald-700">
+                        Nearby
+                      </Text>
                     </View>
-
-                    <Text className="mt-3 text-[20px] font-bold leading-7 text-slate-950">{job.title}</Text>
-                    <Text className="mt-2 text-sm leading-6 text-slate-500">{metaLine}</Text>
-                  </View>
-
-                  <View className="min-w-[104px] rounded-[24px] bg-[#F4F8F8] px-4 py-4">
-                    <Text className="text-[11px] font-bold uppercase tracking-[1px] text-slate-400">Budget</Text>
-                    <Text className="mt-2 text-2xl font-bold text-slate-950">US${job.budget.toFixed(0)}</Text>
+                  ) : null}
+                  {job.isMatch ? (
+                    <View className="flex-row items-center gap-1 rounded-full bg-[#EEF3F8] px-2.5 py-1">
+                      <Sparkles size={11} color={COLORS.navy} strokeWidth={2} />
+                      <Text className="text-[10px] font-bold uppercase tracking-[1px] text-[#2D4A6A]">
+                        Matched
+                      </Text>
+                    </View>
+                  ) : null}
+                  <View className="flex-row items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+                    <Clock size={11} color={COLORS.textSecondary} strokeWidth={2} />
+                    <Text className="text-[10px] font-bold uppercase tracking-[1px] text-slate-500">
+                      {timeAgo(job.createdAt)}
+                    </Text>
                   </View>
                 </View>
 
-                <Text className="mt-4 text-sm leading-6 text-slate-600">{job.description}</Text>
+                <View className="mt-3 flex-row items-start gap-3">
+                  <View style={homeStyles.categoryChip}>
+                    <CategoryIcon size={18} color={COLORS.navy} strokeWidth={1.9} />
+                  </View>
+                  <Text className="flex-1 text-[19px] font-bold leading-7 text-slate-950">{job.title}</Text>
+                  <View className="items-end">
+                    <Text className="text-[10px] font-bold uppercase tracking-[1px] text-slate-400">Budget</Text>
+                    <View className="mt-1 flex-row items-center gap-1.5">
+                      <Wallet size={16} color={COLORS.navy} strokeWidth={1.9} />
+                      <Text className="text-lg font-bold text-slate-950">US${job.budget.toFixed(0)}</Text>
+                    </View>
+                  </View>
+                </View>
 
-                <View className="mt-4 flex-row flex-wrap gap-2">
+                <View className="mt-2 flex-row flex-wrap items-center">
+                  <Text className="text-sm leading-6 text-slate-500">{job.clientName}</Text>
+                  <Text className="text-sm leading-6 text-slate-400"> · </Text>
+                  <MapPin size={13} color={COLORS.textMuted} strokeWidth={2} />
+                  <Text className="text-sm leading-6 text-slate-500"> {job.location}</Text>
+                  {job.distanceKm != null ? (
+                    <Text className="text-sm leading-6 text-slate-500"> · {job.distanceKm.toFixed(1)} km away</Text>
+                  ) : null}
+                </View>
+
+                <Text className="mt-3 text-sm leading-6 text-slate-500">{job.description}</Text>
+
+                <View className="mt-3 flex-row flex-wrap gap-2">
                   {serviceTags.map((tag) => (
-                    <View key={tag} className="rounded-full bg-[#F7FAFB] px-3 py-2">
-                      <Text className="text-xs font-bold text-slate-700">{tag}</Text>
+                    <View key={tag} className="rounded-full border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-1.5">
+                      <Text className="text-xs font-semibold text-slate-600">{tag}</Text>
                     </View>
                   ))}
                 </View>
 
-                <View className="mt-4 rounded-[24px] bg-[#F7FAFB] px-4 py-4">
-                  <View className="flex-row items-center justify-between gap-3">
-                    <View className="flex-1">
-                      <Text className="text-[11px] font-bold uppercase tracking-[1px] text-slate-400">
-                        Client trust
-                      </Text>
-                      <Text className="mt-2 text-sm font-semibold text-slate-900">{trustLabel}</Text>
-                    </View>
-                    <View className="rounded-full bg-white px-3 py-2">
-                      <Text className="text-xs font-bold text-slate-600">{job.category}</Text>
-                    </View>
+                <View className="mt-4 flex-row flex-wrap items-center gap-2">
+                  <Star size={15} color={COLORS.warning} fill={COLORS.warning} strokeWidth={2} />
+                  <Text className="text-[10px] font-bold uppercase tracking-[1px] text-slate-400">
+                    Client trust
+                  </Text>
+                  <Text className="flex-1 text-sm font-semibold text-slate-900">{trustLabel}</Text>
+                  <View className="rounded-full bg-[#F8FAFC] px-3 py-1.5">
+                    <Text className="text-xs font-bold text-slate-600">{job.category}</Text>
                   </View>
                 </View>
 
-                <View className="mt-4 flex-row items-center justify-between gap-3">
-                  <View className="flex-1">
-                    <Text className="text-xs font-bold uppercase tracking-[1px] text-slate-400">
-                      Next step
-                    </Text>
-                    <Text className="mt-1 text-sm text-slate-500">
-                      {isApplied ? "Application sent. Open the board for follow-up." : "Review the brief, then send your quote."}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => handleApply(job)}
-                    disabled={isApplied || isApplying}
-                    className={`rounded-full px-5 py-3.5 ${isApplied ? "bg-[#D8E8ED]" : "bg-[#2D4A6A]"}`}
-                  >
-                    {isApplying ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Text className={`text-sm font-bold ${isApplied ? "text-[#2D4A6A]" : "text-white"}`}>
-                        {isApplied ? "Applied" : "Apply now"}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
+                <View className="mt-4">
+                  <Text className="text-xs font-bold uppercase tracking-[1px] text-slate-400">
+                    Next step
+                  </Text>
+                  <Text className="mt-1 text-sm text-slate-500">
+                    {isApplied ? "Application sent. Open the board for follow-up." : "Review the brief, then send your quote."}
+                  </Text>
                 </View>
+                <TouchableOpacity
+                  onPress={() => handleApply(job)}
+                  disabled={isApplied || isApplying}
+                  className={`mt-3 items-center rounded-full py-3.5 ${isApplied ? "bg-[#D8E8ED]" : "bg-[#2D4A6A]"}`}
+                >
+                  {isApplying ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text className={`text-sm font-bold ${isApplied ? "text-[#2D4A6A]" : "text-white"}`}>
+                      {isApplied ? "Applied" : "Apply now"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
               </View>
             )
           })
         )}
       </ScrollView>
+
+      <Modal
+        visible={filtersVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setFiltersVisible(false)}
+      >
+        <View style={homeStyles.sheetBackdrop}>
+          <Pressable style={homeStyles.sheetDismiss} onPress={() => setFiltersVisible(false)} />
+          <View style={homeStyles.sheet}>
+            <View style={homeStyles.sheetHeader}>
+              <Text style={homeStyles.sheetTitle}>Filters</Text>
+              <TouchableOpacity
+                onPress={() => setFiltersVisible(false)}
+                style={homeStyles.sheetClose}
+              >
+                <X size={18} color={COLORS.textPrimary} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 28 }}
+            >
+              <View className="mt-4">
+                <Text className="text-xs font-bold uppercase tracking-[1px] text-slate-400">
+                  Service
+                </Text>
+                <View className="mt-2 flex-row flex-wrap gap-2">
+                  {SERVICE_FILTERS.map((service) => (
+                    <TouchableOpacity
+                      key={service}
+                      onPress={() => setSelectedService(service)}
+                      className={`rounded-full px-3 py-2 ${
+                        selectedService === service ? "bg-[#D8E8ED]" : "bg-[#F8FAFC]"
+                      }`}
+                    >
+                      <Text className="text-xs font-bold text-slate-700">{service}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View className="mt-4 flex-row gap-3">
+                <View className="flex-1">
+                  <Text className="mb-2 text-xs font-bold uppercase tracking-[1px] text-slate-400">
+                    Budget cap
+                  </Text>
+                  <TextInput
+                    value={budgetCap}
+                    onChangeText={setBudgetCap}
+                    placeholder="Any"
+                    keyboardType="numeric"
+                    placeholderTextColor="#94A3B8"
+                    className="rounded-2xl bg-[#F8FAFC] px-4 py-3 text-slate-900"
+                  />
+                </View>
+                <View className="flex-1">
+                  <Text className="mb-2 text-xs font-bold uppercase tracking-[1px] text-slate-400">
+                    Client rating
+                  </Text>
+                  <TextInput
+                    value={minimumClientRating}
+                    onChangeText={setMinimumClientRating}
+                    placeholder="0"
+                    keyboardType="numeric"
+                    placeholderTextColor="#94A3B8"
+                    className="rounded-2xl bg-[#F8FAFC] px-4 py-3 text-slate-900"
+                  />
+                </View>
+              </View>
+
+              <View className="mt-4">
+                <Text className="text-xs font-bold uppercase tracking-[1px] text-slate-400">
+                  Sort
+                </Text>
+                <View className="mt-2 flex-row flex-wrap gap-2">
+                  {SORT_OPTIONS.map((option) => (
+                    <TouchableOpacity
+                      key={option.key}
+                      onPress={() => setSortBy(option.key)}
+                      className={`rounded-full px-3 py-2 ${
+                        sortBy === option.key ? "bg-[#2D4A6A]" : "bg-[#F8FAFC]"
+                      }`}
+                    >
+                      <Text className={`text-xs font-bold ${sortBy === option.key ? "text-white" : "text-slate-700"}`}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View className="mt-4 rounded-2xl bg-[#F8FAFC] p-4">
+                <Text className="text-sm font-bold text-slate-900">Location ranking</Text>
+                <Text className="mt-2 text-sm leading-6 text-slate-500">
+                  {nearbyLocation.loading
+                    ? "Detecting your current area..."
+                    : nearbyLocation.label || "Allow location to rank jobs closest to you first."}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => void loadNearbyLocation()}
+                  className="mt-3 self-start rounded-full bg-slate-900 px-4 py-2.5"
+                >
+                  <Text className="text-xs font-bold text-white">
+                    {nearbyLocation.loading ? "Updating..." : "Refresh area"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {selectedJob ? (
         <ApplicationModal
@@ -953,15 +1055,98 @@ const homeStyles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#0F172A",
+    color: COLORS.textPrimary,
     letterSpacing: -0.4,
+    fontFamily: "Quicksand-Bold",
   },
   bellPill: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#D8E8ED",
-    backgroundColor: "#FFFFFF",
+    borderColor: COLORS.borderSoft,
+    backgroundColor: COLORS.surface,
     padding: 10,
+  },
+  laneCard: {
+    borderRadius: 32,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    marginBottom: 16,
+    ...SHADOW.card,
+  },
+  searchWrap: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  searchIcon: {
+    position: "absolute",
+    left: 14,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  filtersButton: {
+    marginTop: 12,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: COLORS.borderSoft,
+    backgroundColor: COLORS.navySoft,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  filtersButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.navy,
+  },
+  sheetBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+  },
+  sheetDismiss: {
+    flex: 1,
+  },
+  sheet: {
+    maxHeight: "78%",
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: RADIUS.xxl,
+    borderTopRightRadius: RADIUS.xxl,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    ...SHADOW.raised,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+    fontFamily: "Quicksand-Bold",
+  },
+  sheetClose: {
+    width: 34,
+    height: 34,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  categoryChip: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.navySoft,
+    alignItems: "center",
+    justifyContent: "center",
   },
 })
 

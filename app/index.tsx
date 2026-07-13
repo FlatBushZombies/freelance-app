@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Text, View, TouchableOpacity, ActivityIndicator, Image } from "react-native"
 import { router } from "expo-router"
-import { useSession } from "@clerk/clerk-expo"
+import { useSession, useAuth } from "@clerk/clerk-expo"
 import { Feather } from "@expo/vector-icons"
 import { IMAGES } from "@/constants"
 import { SplashScreen } from "@/components/SplashScreen"
@@ -11,7 +11,7 @@ import { getApiUrl } from "@/lib/fetch"
 
 export default function Index() {
   const { session, isLoaded } = useSession()
-  const isSignedIn = session?.status === "active"
+  const { isSignedIn } = useAuth()
   const userId = session?.user?.id
   const [showSplash, setShowSplash] = useState(true)
 

@@ -17,7 +17,7 @@ import {
 } from "react-native"
 import { useUser, useAuth } from "@clerk/clerk-expo"
 import { Ionicons } from "@expo/vector-icons"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { router } from "expo-router"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import WalletComponent from "@/components/WalletComponent"
@@ -97,6 +97,7 @@ function StarPicker({
 const ProfileScreen = () => {
   const { user } = useUser()
   const { getToken } = useAuth()
+  const getTokenRef = useRef(getToken)
   const [showVerificationModal, setShowVerificationModal] = useState(false)
   const [activeTab, setActiveTab] = useState("projects")
   const [projects, setProjects] = useState<ProjectItem[]>([])
@@ -111,6 +112,10 @@ const ProfileScreen = () => {
   const [submittingReviewId, setSubmittingReviewId] = useState<number | null>(null)
   const [proximityTrackingEnabled, setProximityTrackingEnabled] = useState(false)
   const [proximityTrackingBusy, setProximityTrackingBusy] = useState(false)
+
+  useEffect(() => {
+    getTokenRef.current = getToken
+  }, [getToken])
 
   useEffect(() => {
     AsyncStorage.getItem(PROXIMITY_TRACKING_STORAGE_KEY).then((value) => {
@@ -159,7 +164,7 @@ const ProfileScreen = () => {
 
     try {
       setLoading(true)
-      const token = await getToken()
+      const token = await getTokenRef.current()
       if (!token) {
         return
       }
@@ -217,7 +222,7 @@ const ProfileScreen = () => {
 
   useEffect(() => {
     void fetchProfileData()
-  }, [getToken, user?.id])
+  }, [user?.id])
 
   const acceptedProjects = projects.filter((project) => project.status === "accepted")
   const pendingProjects = projects.filter((project) => project.status === "pending")
