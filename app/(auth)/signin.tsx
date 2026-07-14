@@ -1,13 +1,14 @@
 import { useSignIn, useAuth } from "@clerk/clerk-expo"
 import { Link, router } from "expo-router"
 import { useCallback, useEffect, useState } from "react"
-import { Alert, ScrollView, Text, View } from "react-native"
+import { ScrollView, Text, View } from "react-native"
 
 import CustomButton from "@/components/CustomButton"
 import InputField from "@/components/InputField"
 import OAuth from "@/components/OAuth"
 import { AlreadySignedInRedirect } from "@/components/AlreadySignedInRedirect"
 import { icons } from "@/constants"
+import { showErrorToast, showInfoToast } from "@/lib/toast"
 
 const SignIn = () => {
   const { signIn, setActive, isLoaded } = useSignIn()
@@ -20,7 +21,7 @@ const SignIn = () => {
     if (!isLoaded || loading) return
 
     if (!form.email.trim() || !form.password) {
-      return Alert.alert("Missing Fields", "Please enter both email and password.")
+      return showInfoToast("Missing Fields", "Please enter both email and password.")
     }
 
     setLoading(true)
@@ -36,12 +37,12 @@ const SignIn = () => {
         router.replace("/")
       } else {
         console.log("SignIn attempt incomplete:", JSON.stringify(signInAttempt, null, 2))
-        Alert.alert("Error", "Log in failed. Please try again.")
+        showErrorToast("Error", "Log in failed. Please try again.")
       }
     } catch (err: any) {
       console.log("SignIn error:", JSON.stringify(err, null, 2))
       const message = err.errors?.[0]?.longMessage || err.message || "Unexpected error occurred."
-      Alert.alert("Error", message)
+      showErrorToast("Error", message)
     } finally {
       setLoading(false)
     }

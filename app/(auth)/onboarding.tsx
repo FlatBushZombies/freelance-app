@@ -5,7 +5,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   ScrollView,
   Image,
   ActivityIndicator,
@@ -24,6 +23,7 @@ import {
   LightBulbIcon,
 } from "react-native-heroicons/solid";
 import { getApiUrl } from "@/lib/fetch";
+import { showErrorToast, showInfoToast } from "@/lib/toast";
 
 const Onboarding = () => {
   const { user, isLoaded } = useUser();
@@ -85,12 +85,12 @@ const Onboarding = () => {
 
   const handleSubmit = async () => {
     if (!isFormValid()) {
-      Alert.alert("Required Fields", "Please fill in all fields to continue");
+      showInfoToast("Required Fields", "Please fill in all fields to continue");
       return;
     }
 
     if (!user?.id) {
-      Alert.alert("Error", "User not loaded. Please try again.");
+      showErrorToast("Error", "User not loaded. Please try again.");
       return;
     }
 
@@ -122,7 +122,7 @@ const Onboarding = () => {
       router.replace("/(root)/home");
     } catch (error) {
       console.error("Onboarding Error:", error);
-      Alert.alert("Error", "Something went wrong. Please try again.");
+      showErrorToast("Error", "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

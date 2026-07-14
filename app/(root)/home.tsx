@@ -14,7 +14,6 @@ import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState
 import * as Location from "expo-location"
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -29,6 +28,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons } from "@expo/vector-icons"
 import { COLORS, RADIUS, SHADOW } from "@/constants/theme"
+import { showErrorToast, showInfoToast } from "@/lib/toast"
 
 const FALLBACK_AVATAR = require("../../assets/images/quickhands.png")
 import { SafeAreaView } from "react-native-safe-area-context"
@@ -374,6 +374,7 @@ const Home = () => {
     } catch (error) {
       console.error("Fetch jobs error", error)
       if (!hasLoadedJobs) {
+        showErrorToast("Couldn't load jobs", "Pull down to try again.")
         startTransition(() => {
           setJobs([])
         })
@@ -506,7 +507,7 @@ const Home = () => {
 
   const handleApply = async (job: Job) => {
     if (!user?.id) {
-      Alert.alert("Sign in required")
+      showInfoToast("Sign in required")
       return
     }
 

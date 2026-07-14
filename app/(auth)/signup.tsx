@@ -1,7 +1,7 @@
 import { useAuth, useSignUp } from "@clerk/clerk-expo";
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { Alert, Image, ScrollView, Text, View } from "react-native";
+import { Image, ScrollView, Text, View } from "react-native";
 import { ReactNativeModal } from "react-native-modal";
 import { CheckCircleIcon } from "react-native-heroicons/solid";
 
@@ -12,6 +12,7 @@ import { AlreadySignedInRedirect } from "@/components/AlreadySignedInRedirect";
 import { icons, IMAGES } from "@/constants";
 import { COLORS } from "@/constants/theme";
 import { fetchAPI } from "@/lib/fetch";
+import { showErrorToast } from "@/lib/toast";
 
 const SignUp = () => {
   const { isLoaded, signUp, setActive } = useSignUp();
@@ -45,7 +46,7 @@ const SignUp = () => {
       // See https://clerk.com/docs/custom-flows/error-handling
       // for more info on error handling
       console.log(JSON.stringify(err, null, 2));
-      Alert.alert("Error", err.errors[0].longMessage);
+      showErrorToast("Error", err.errors[0].longMessage);
     }
   };
   const onPressVerify = async () => {

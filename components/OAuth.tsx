@@ -1,10 +1,11 @@
 import { useOAuth } from "@clerk/clerk-expo";
 import { router } from "expo-router";
-import { Alert, Image, Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
 import { useState } from "react";
 import CustomButton from "@/components/CustomButton";
 import { icons } from "@/constants";
 import { googleOAuth } from "@/lib/auth";
+import { showErrorToast } from "@/lib/toast";
 
 const OAuth = () => {
   const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
@@ -24,11 +25,11 @@ const OAuth = () => {
           router.replace("/(root)/home");
         }
       } else {
-        Alert.alert("Error", result.message || "Google login failed");
+        showErrorToast("Error", result.message || "Google login failed");
       }
     } catch (error) {
       console.error("Google Sign-In Error:", error);
-      Alert.alert("Error", "Something went wrong. Please try again.");
+      showErrorToast("Error", "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

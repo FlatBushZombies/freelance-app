@@ -1,5 +1,5 @@
-import React from "react";
-import { Text, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, Text, View } from "react-native";
 import {
   CheckCircleIcon,
   InformationCircleIcon,
@@ -21,10 +21,38 @@ function ToastCard({
   accentSoft: string;
   Icon: React.ComponentType<{ size?: number; color?: string }>;
 }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.94)).current;
+  const translateY = useRef(new Animated.Value(-8)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        friction: 6,
+        tension: 120,
+        useNativeDriver: true,
+      }),
+      Animated.spring(translateY, {
+        toValue: 0,
+        friction: 6,
+        tension: 120,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   return (
-    <View
+    <Animated.View
       style={{
         width: "92%",
+        opacity,
+        transform: [{ scale }, { translateY }],
         flexDirection: "row",
         alignItems: "flex-start",
         gap: 12,
@@ -73,7 +101,7 @@ function ToastCard({
           </Text>
         ) : null}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

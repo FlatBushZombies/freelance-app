@@ -2,7 +2,6 @@
 
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   SafeAreaView,
@@ -22,6 +21,7 @@ import { router } from "expo-router"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import WalletComponent from "@/components/WalletComponent"
 import { getApiUrl } from "@/lib/fetch"
+import { showErrorToast, showInfoToast } from "@/lib/toast"
 import {
   hasAcceptedApplication,
   startBackgroundProximityTracking,
@@ -137,7 +137,7 @@ const ProfileScreen = () => {
 
       const eligible = await hasAcceptedApplication(getToken)
       if (!eligible) {
-        Alert.alert(
+        showInfoToast(
           "No accepted jobs yet",
           "This turns on automatically once a client accepts one of your applications. You can still enable it now — it'll start sharing location the moment that happens."
         )
@@ -145,7 +145,7 @@ const ProfileScreen = () => {
 
       const result = await startBackgroundProximityTracking(getToken)
       if (!result.started) {
-        Alert.alert(
+        showErrorToast(
           "Couldn't turn this on",
           result.reason || "Please allow location access and try again."
         )
@@ -213,6 +213,7 @@ const ProfileScreen = () => {
       }
     } catch (error) {
       console.error("Error fetching freelancer profile data:", error)
+      showErrorToast("Couldn't load your profile", "Pull down to try again.")
       setProjects([])
       setReceivedReviews([])
     } finally {
@@ -280,6 +281,10 @@ const ProfileScreen = () => {
       await fetchProfileData()
     } catch (error) {
       console.error("Failed to save client review", error)
+      showErrorToast(
+        "Couldn't save review",
+        error instanceof Error ? error.message : "Please try again."
+      )
     } finally {
       setSubmittingReviewId(null)
     }
