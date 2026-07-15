@@ -10,6 +10,11 @@
       "C:\\Users\\gamerrdotcom\\Desktop\\quickhands\\src\\services",
       "C:\\Users\\gamerrdotcom\\Desktop\\client-app\\components",
       "C:\\Users\\gamerrdotcom\\Desktop\\client-app\\app\\(root)"
+    ],
+    "allow": [
+      "Bash(nslookup update-assets-upload-production.storage.googleapis.com)",
+      "Bash(nslookup storage.googleapis.com)",
+      "Bash(ping -n 2 storage.googleapis.com)"
     ]
   }
 }

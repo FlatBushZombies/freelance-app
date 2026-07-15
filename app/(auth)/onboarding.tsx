@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Image,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -16,21 +15,56 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   UserIcon,
-  BoltIcon,
   ChartBarIcon,
   CurrencyDollarIcon,
   CheckIcon,
-  LightBulbIcon,
+  BellIcon,
+  WrenchScrewdriverIcon,
+  BoltIcon,
+  SparklesIcon,
+  Cog6ToothIcon,
+  PaintBrushIcon,
+  TruckIcon,
+  Squares2X2Icon,
 } from "react-native-heroicons/solid";
 import { getApiUrl } from "@/lib/fetch";
 import { showErrorToast, showInfoToast } from "@/lib/toast";
+import { COLORS, RADIUS, SHADOW } from "@/constants/theme";
+
+const SKILL_OPTIONS = [
+  { label: "Plumbing", Icon: WrenchScrewdriverIcon },
+  { label: "Electrical", Icon: BoltIcon },
+  { label: "Cleaning", Icon: SparklesIcon },
+  { label: "Carpentry", Icon: Cog6ToothIcon },
+  { label: "Painting", Icon: PaintBrushIcon },
+  { label: "Moving", Icon: TruckIcon },
+  { label: "Other", Icon: Squares2X2Icon },
+];
+
+const EXPERIENCE_LEVELS = [
+  { label: "Beginner", subtitle: "0-2 years", value: "Beginner (0-2 years)" },
+  { label: "Intermediate", subtitle: "2-5 years", value: "Intermediate (2-5 years)" },
+  { label: "Expert", subtitle: "5+ years", value: "Expert (5+ years)" },
+];
+
+function parseStoredSkills(raw: string) {
+  const parts = raw
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const known = SKILL_OPTIONS.map((s) => s.label).filter((label) => label !== "Other");
+  const selected = parts.filter((part) => known.includes(part));
+  const custom = parts.filter((part) => !known.includes(part)).join(", ");
+  return { selected, custom };
+}
 
 const Onboarding = () => {
   const { user, isLoaded } = useUser();
   const router = useRouter();
 
   const [fullName, setFullName] = useState("");
-  const [skills, setSkills] = useState("");
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [customSkill, setCustomSkill] = useState("");
   const [experienceLevel, setExperienceLevel] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
   const [loading, setLoading] = useState(false);
@@ -63,7 +97,11 @@ const Onboarding = () => {
         }
 
         setFullName(data.user?.name || user.fullName || "");
-        setSkills(data.user?.skills || "");
+        if (data.user?.skills) {
+          const { selected, custom } = parseStoredSkills(data.user.skills);
+          setSelectedSkills(selected);
+          setCustomSkill(custom);
+        }
         setExperienceLevel(data.user?.experienceLevel || "");
         setHourlyRate(data.user?.hourlyRate?.toString() || "");
       } catch (err) {
@@ -76,12 +114,21 @@ const Onboarding = () => {
     checkOnboarding();
   }, [router, user, isLoaded, isNavigationReady]);
 
+  const toggleSkill = (label: string) => {
+    setSelectedSkills((prev) =>
+      prev.includes(label) ? prev.filter((s) => s !== label) : [...prev, label]
+    );
+  };
+
+  const hasAnySkill = selectedSkills.length > 0 || customSkill.trim().length > 0;
+
   const isFormValid = () =>
     fullName.trim().length > 0 &&
-    skills.trim().length > 0 &&
+    hasAnySkill &&
     experienceLevel.length > 0 &&
     hourlyRate.trim().length > 0 &&
-    !isNaN(parseFloat(hourlyRate));
+    !isNaN(parseFloat(hourlyRate)) &&
+    parseFloat(hourlyRate) > 0;
 
   const handleSubmit = async () => {
     if (!isFormValid()) {
@@ -96,6 +143,10 @@ const Onboarding = () => {
 
     setLoading(true);
 
+    const skillsValue = [...selectedSkills, customSkill.trim()]
+      .filter(Boolean)
+      .join(", ");
+
     try {
       const response = await fetch(
         getApiUrl("/api/user/update"),
@@ -105,7 +156,7 @@ const Onboarding = () => {
           body: JSON.stringify({
             clerkId: user.id,
             name: fullName.trim(),
-            skills: skills.trim(),
+            skills: skillsValue,
             experienceLevel,
             hourlyRate: parseFloat(hourlyRate),
             completedOnboarding: true,
@@ -130,9 +181,9 @@ const Onboarding = () => {
 
   if (!isLoaded || checkingStatus) {
     return (
-      <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#2D4A6A" />
-        <Text className="font-quicksand-semibold text-gray-500 text-sm mt-4">
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.surface }}>
+        <ActivityIndicator size="large" color={COLORS.navy} />
+        <Text style={{ fontFamily: "Quicksand-SemiBold", color: COLORS.textMuted, fontSize: 14, marginTop: 16 }}>
           Preparing your profile...
         </Text>
       </View>
@@ -141,75 +192,82 @@ const Onboarding = () => {
 
   return (
     <LinearGradient
-      colors={["#F8FAFC", "#FFFFFF", "#FEF3F2"]}
+      colors={[COLORS.background, COLORS.surface, COLORS.navySoft]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      className="flex-1"
+      style={{ flex: 1 }}
     >
-      <SafeAreaView className="flex-1">
+      <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          className="flex-1"
+          style={{ flex: 1 }}
         >
           <ScrollView
-            className="flex-1"
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 32, paddingBottom: 32 }}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: 32 }}
             showsVerticalScrollIndicator={false}
           >
-            {/* Illustration Card */}
-            <View
-              className="bg-white rounded-3xl p-6 mb-8 items-center"
+            {/* Hero */}
+            <LinearGradient
+              colors={[COLORS.navy, COLORS.navyDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={{
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 12 },
-                shadowOpacity: 0.08,
-                shadowRadius: 24,
-                elevation: 6,
+                borderRadius: RADIUS.xxl,
+                padding: 28,
+                marginBottom: 24,
+                ...SHADOW.raised,
+                shadowColor: COLORS.navyDark,
               }}
             >
-              <Image
-                source={{
-                  uri: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/freelance-animator-get-a-quote.jpg-LcEVYb5xNc7ZhcNSKGW99Tdksw4UGf.webp",
+              <View
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: RADIUS.lg,
+                  backgroundColor: "rgba(255,255,255,0.14)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 18,
                 }}
-                style={{ width: 220, height: 165 }}
-                resizeMode="contain"
-              />
-            </View>
-
-            {/* Header Section */}
-            <View className="mb-8">
-              <Text className="font-quicksand-semibold text-orange-500 text-xs mb-3 tracking-widest uppercase">
-                Welcome to QuickHands
-              </Text>
-              <Text
-                className="font-quicksand-bold text-3xl text-gray-900 mb-3"
-                style={{ lineHeight: 38 }}
               >
-                Let us set up your profile
+                <UserIcon size={26} color="#FFFFFF" />
+              </View>
+              <Text style={{ fontFamily: "Quicksand-Bold", fontSize: 24, color: "#FFFFFF", lineHeight: 30 }}>
+                Let&apos;s set up your profile
               </Text>
-              <Text className="font-quicksand-medium text-gray-500 text-base leading-6">
-                Tell us about yourself so we can match you with the perfect gigs.
+              <Text style={{ fontFamily: "Quicksand-Medium", fontSize: 14, color: "rgba(255,255,255,0.75)", marginTop: 8, lineHeight: 20 }}>
+                Tell us about yourself so we can match you with the right jobs the moment they&apos;re posted.
               </Text>
-            </View>
+            </LinearGradient>
 
             {/* Form Card */}
             <View
-              className="bg-white rounded-3xl p-6 mb-6"
               style={{
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.06,
-                shadowRadius: 20,
-                elevation: 4,
+                backgroundColor: COLORS.surface,
+                borderRadius: RADIUS.xxl,
+                padding: 22,
+                marginBottom: 20,
+                ...SHADOW.card,
               }}
             >
               {/* Full Name */}
-              <View className="mb-7">
-                <View className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-[#2D4A6A]">
-                    <UserIcon size={18} color="#FFFFFF" />
+              <View style={{ marginBottom: 26 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
+                  <View
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: RADIUS.sm,
+                      backgroundColor: COLORS.navy,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 12,
+                    }}
+                  >
+                    <UserIcon size={17} color="#FFFFFF" />
                   </View>
-                  <Text className="font-quicksand-semibold text-gray-900 text-base">
+                  <Text style={{ fontFamily: "Quicksand-SemiBold", fontSize: 15, color: COLORS.textPrimary }}>
                     Full Name
                   </Text>
                 </View>
@@ -217,82 +275,175 @@ const Onboarding = () => {
                   value={fullName}
                   onChangeText={setFullName}
                   placeholder="Enter your full name"
-                  placeholderTextColor="#9CA3AF"
-                  className="font-quicksand bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-gray-900 text-base"
+                  placeholderTextColor={COLORS.textMuted}
+                  style={{
+                    fontFamily: "Quicksand-Medium",
+                    backgroundColor: COLORS.surfaceMuted,
+                    borderWidth: 1,
+                    borderColor: COLORS.border,
+                    borderRadius: RADIUS.md,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    color: COLORS.textPrimary,
+                    fontSize: 15,
+                  }}
                 />
               </View>
 
               {/* Skills */}
-              <View className="mb-7">
-                <View className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-[#2D4A6A]">
-                    <BoltIcon size={18} color="#FFFFFF" />
+              <View style={{ marginBottom: 26 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
+                  <View
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: RADIUS.sm,
+                      backgroundColor: COLORS.navy,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 12,
+                    }}
+                  >
+                    <WrenchScrewdriverIcon size={17} color="#FFFFFF" />
                   </View>
-                  <Text className="font-quicksand-semibold text-gray-900 text-base">
-                    Your Skills
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: "Quicksand-SemiBold", fontSize: 15, color: COLORS.textPrimary }}>
+                      Your Skills
+                    </Text>
+                    <Text style={{ fontFamily: "Quicksand-Medium", fontSize: 12, color: COLORS.textMuted, marginTop: 1 }}>
+                      Pick everything you take jobs for
+                    </Text>
+                  </View>
                 </View>
-                <TextInput
-                  value={skills}
-                  onChangeText={setSkills}
-                  placeholder="e.g. Web Design, React, Copywriting"
-                  placeholderTextColor="#9CA3AF"
-                  className="font-quicksand bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-gray-900 text-base"
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                  style={{ minHeight: 100 }}
-                />
+
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                  {SKILL_OPTIONS.map(({ label, Icon }) => {
+                    const active = selectedSkills.includes(label);
+                    return (
+                      <TouchableOpacity
+                        key={label}
+                        onPress={() => toggleSkill(label)}
+                        activeOpacity={0.7}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 7,
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: RADIUS.pill,
+                          borderWidth: 1.5,
+                          borderColor: active ? COLORS.navy : COLORS.border,
+                          backgroundColor: active ? COLORS.navy : COLORS.surfaceMuted,
+                        }}
+                      >
+                        <Icon size={15} color={active ? "#FFFFFF" : COLORS.textSecondary} />
+                        <Text
+                          style={{
+                            fontFamily: "Quicksand-SemiBold",
+                            fontSize: 13,
+                            color: active ? "#FFFFFF" : COLORS.textSecondary,
+                          }}
+                        >
+                          {label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {selectedSkills.includes("Other") && (
+                  <TextInput
+                    value={customSkill}
+                    onChangeText={setCustomSkill}
+                    placeholder="e.g. Appliance Repair, Landscaping"
+                    placeholderTextColor={COLORS.textMuted}
+                    style={{
+                      marginTop: 12,
+                      fontFamily: "Quicksand-Medium",
+                      backgroundColor: COLORS.surfaceMuted,
+                      borderWidth: 1,
+                      borderColor: COLORS.border,
+                      borderRadius: RADIUS.md,
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
+                      color: COLORS.textPrimary,
+                      fontSize: 15,
+                    }}
+                  />
+                )}
               </View>
 
               {/* Experience Level */}
-              <View className="mb-7">
-                <View className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-[#2D4A6A]">
-                    <ChartBarIcon size={18} color="#FFFFFF" />
+              <View style={{ marginBottom: 26 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
+                  <View
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: RADIUS.sm,
+                      backgroundColor: COLORS.navy,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 12,
+                    }}
+                  >
+                    <ChartBarIcon size={17} color="#FFFFFF" />
                   </View>
-                  <Text className="font-quicksand-semibold text-gray-900 text-base">
+                  <Text style={{ fontFamily: "Quicksand-SemiBold", fontSize: 15, color: COLORS.textPrimary }}>
                     Experience Level
                   </Text>
                 </View>
-                <View className="gap-3">
-                  {[
-                    { label: "Beginner", subtitle: "0-2 years", value: "Beginner (0-2 years)" },
-                    { label: "Intermediate", subtitle: "2-5 years", value: "Intermediate (2-5 years)" },
-                    { label: "Expert", subtitle: "5+ years", value: "Expert (5+ years)" },
-                  ].map((level) => {
+                <View style={{ gap: 10 }}>
+                  {EXPERIENCE_LEVELS.map((level) => {
                     const active = experienceLevel === level.value;
                     return (
                       <TouchableOpacity
                         key={level.value}
                         onPress={() => setExperienceLevel(level.value)}
                         activeOpacity={0.7}
-                        className={`rounded-2xl px-5 py-4 border-2 ${
-                          active
-                            ? "bg-[#2D4A6A] border-[#2D4A6A]"
-                            : "bg-gray-50 border-gray-100"
-                        }`}
+                        style={{
+                          borderRadius: RADIUS.md,
+                          paddingHorizontal: 16,
+                          paddingVertical: 14,
+                          borderWidth: 1.5,
+                          borderColor: active ? COLORS.navy : COLORS.border,
+                          backgroundColor: active ? COLORS.navy : COLORS.surfaceMuted,
+                        }}
                       >
-                        <View className="flex-row items-center justify-between">
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                           <View>
                             <Text
-                              className={`font-quicksand-semibold text-base ${
-                                active ? "text-white" : "text-gray-900"
-                              }`}
+                              style={{
+                                fontFamily: "Quicksand-SemiBold",
+                                fontSize: 15,
+                                color: active ? "#FFFFFF" : COLORS.textPrimary,
+                              }}
                             >
                               {level.label}
                             </Text>
                             <Text
-                              className={`font-quicksand text-sm mt-1 ${
-                                active ? "text-gray-300" : "text-gray-500"
-                              }`}
+                              style={{
+                                fontFamily: "Quicksand-Medium",
+                                fontSize: 12,
+                                marginTop: 2,
+                                color: active ? "rgba(255,255,255,0.75)" : COLORS.textMuted,
+                              }}
                             >
                               {level.subtitle}
                             </Text>
                           </View>
                           {active && (
-                            <View className="w-7 h-7 rounded-full items-center justify-center bg-white">
-                              <CheckIcon size={16} color="#2D4A6A" />
+                            <View
+                              style={{
+                                width: 26,
+                                height: 26,
+                                borderRadius: 13,
+                                backgroundColor: "#FFFFFF",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <CheckIcon size={15} color={COLORS.navy} />
                             </View>
                           )}
                         </View>
@@ -304,28 +455,49 @@ const Onboarding = () => {
 
               {/* Hourly Rate */}
               <View>
-                <View className="flex-row items-center mb-4">
-                  <View className="w-10 h-10 rounded-2xl items-center justify-center mr-3 bg-[#2D4A6A]">
-                    <CurrencyDollarIcon size={18} color="#FFFFFF" />
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
+                  <View
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: RADIUS.sm,
+                      backgroundColor: COLORS.navy,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginRight: 12,
+                    }}
+                  >
+                    <CurrencyDollarIcon size={17} color="#FFFFFF" />
                   </View>
-                  <Text className="font-quicksand-semibold text-gray-900 text-base">
+                  <Text style={{ fontFamily: "Quicksand-SemiBold", fontSize: 15, color: COLORS.textPrimary }}>
                     Hourly Rate (USD)
                   </Text>
                 </View>
-                <View className="flex-row items-center bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4">
-                  <Text className="font-quicksand-semibold text-gray-400 text-lg mr-2">
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: COLORS.surfaceMuted,
+                    borderWidth: 1,
+                    borderColor: COLORS.border,
+                    borderRadius: RADIUS.md,
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                  }}
+                >
+                  <Text style={{ fontFamily: "Quicksand-SemiBold", fontSize: 17, color: COLORS.textMuted, marginRight: 8 }}>
                     $
                   </Text>
                   <TextInput
                     value={hourlyRate}
                     onChangeText={setHourlyRate}
                     placeholder="50"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={COLORS.textMuted}
                     keyboardType="numeric"
-                    className="font-quicksand flex-1 text-gray-900 text-base"
+                    style={{ fontFamily: "Quicksand-Medium", flex: 1, color: COLORS.textPrimary, fontSize: 15 }}
                   />
-                  <View className="bg-gray-200 rounded-xl px-3 py-1.5">
-                    <Text className="font-quicksand-medium text-gray-600 text-xs">
+                  <View style={{ backgroundColor: COLORS.border, borderRadius: RADIUS.sm, paddingHorizontal: 10, paddingVertical: 5 }}>
+                    <Text style={{ fontFamily: "Quicksand-Medium", fontSize: 11, color: COLORS.textSecondary }}>
                       /hour
                     </Text>
                   </View>
@@ -333,45 +505,70 @@ const Onboarding = () => {
               </View>
             </View>
 
-            {/* Info Box */}
-            <View className="flex-row bg-orange-50 rounded-2xl px-5 py-4 border border-orange-100 items-start">
-              <View className="w-8 h-8 rounded-xl bg-orange-100 items-center justify-center mr-3 mt-0.5">
-                <LightBulbIcon size={16} color="#C2410C" />
+            {/* Notification promise */}
+            <View
+              style={{
+                flexDirection: "row",
+                backgroundColor: COLORS.navySoft,
+                borderRadius: RADIUS.md,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                borderWidth: 1,
+                borderColor: COLORS.borderSoft,
+                alignItems: "flex-start",
+              }}
+            >
+              <View
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: RADIUS.sm,
+                  backgroundColor: COLORS.surface,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginRight: 12,
+                  marginTop: 1,
+                }}
+              >
+                <BellIcon size={15} color={COLORS.navy} />
               </View>
-              <Text className="font-quicksand-medium text-orange-800 text-sm leading-6 flex-1">
-                Don&apos;t worry, you can update all of this information later in your profile settings.
+              <Text style={{ fontFamily: "Quicksand-Medium", fontSize: 13, color: COLORS.navy, lineHeight: 19, flex: 1 }}>
+                We&apos;ll notify you the moment a client posts a job matching these skills. You can update them anytime in your profile.
               </Text>
             </View>
           </ScrollView>
 
           {/* Submit Button */}
           <View
-            className="px-6 pb-8 pt-5 bg-white"
             style={{
-              shadowColor: "#000",
+              paddingHorizontal: 24,
+              paddingBottom: 28,
+              paddingTop: 18,
+              backgroundColor: COLORS.surface,
+              borderTopLeftRadius: RADIUS.xxl,
+              borderTopRightRadius: RADIUS.xxl,
+              shadowColor: COLORS.textPrimary,
               shadowOffset: { width: 0, height: -8 },
               shadowOpacity: 0.06,
               shadowRadius: 16,
               elevation: 8,
-              borderTopLeftRadius: 32,
-              borderTopRightRadius: 32,
             }}
           >
             <TouchableOpacity
               onPress={handleSubmit}
               disabled={!isFormValid() || loading}
               activeOpacity={0.85}
-              className="rounded-2xl py-5 items-center justify-center flex-row"
               style={{
-                backgroundColor: !isFormValid() || loading ? "#D1D5DB" : "#2D4A6A",
-                shadowColor: "#2D4A6A",
-                shadowOffset: { width: 0, height: 12 },
-                shadowOpacity: !isFormValid() || loading ? 0 : 0.25,
-                shadowRadius: 20,
-                elevation: !isFormValid() || loading ? 0 : 10,
+                borderRadius: RADIUS.md,
+                paddingVertical: 18,
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                backgroundColor: !isFormValid() || loading ? COLORS.border : COLORS.navy,
+                ...(!isFormValid() || loading ? {} : { ...SHADOW.raised, shadowColor: COLORS.navy }),
               }}
             >
-              <Text className="font-quicksand-bold text-white text-lg">
+              <Text style={{ fontFamily: "Quicksand-Bold", color: "#FFFFFF", fontSize: 16 }}>
                 {loading ? "Setting up your profile..." : "Get Started"}
               </Text>
             </TouchableOpacity>
@@ -380,26 +577,44 @@ const Onboarding = () => {
           {/* Loading Overlay */}
           {loading && (
             <View
-              className="absolute inset-0 justify-center items-center"
-              style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "rgba(15,23,42,0.5)",
+              }}
             >
               <View
-                className="bg-white rounded-3xl p-10 items-center mx-8"
                 style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 24 },
-                  shadowOpacity: 0.35,
-                  shadowRadius: 40,
-                  elevation: 20,
+                  backgroundColor: COLORS.surface,
+                  borderRadius: RADIUS.xxl,
+                  padding: 36,
+                  alignItems: "center",
+                  marginHorizontal: 32,
+                  ...SHADOW.raised,
                 }}
               >
-                <View className="w-16 h-16 rounded-full bg-gray-100 items-center justify-center mb-5">
-                  <ActivityIndicator size="large" color="#2D4A6A" />
+                <View
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 32,
+                    backgroundColor: COLORS.surfaceMuted,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 18,
+                  }}
+                >
+                  <ActivityIndicator size="large" color={COLORS.navy} />
                 </View>
-                <Text className="font-quicksand-bold text-gray-900 text-lg mb-1">
+                <Text style={{ fontFamily: "Quicksand-Bold", fontSize: 17, color: COLORS.textPrimary, marginBottom: 4 }}>
                   Creating your profile...
                 </Text>
-                <Text className="font-quicksand text-gray-500 text-sm">
+                <Text style={{ fontFamily: "Quicksand-Medium", fontSize: 13, color: COLORS.textMuted }}>
                   This will only take a moment
                 </Text>
               </View>

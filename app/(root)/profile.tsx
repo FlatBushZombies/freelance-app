@@ -16,6 +16,8 @@ import {
 } from "react-native"
 import { useUser, useAuth } from "@clerk/clerk-expo"
 import { Ionicons } from "@expo/vector-icons"
+import { LinearGradient } from "expo-linear-gradient"
+import { COLORS, RADIUS, SHADOW } from "@/constants/theme"
 import { useEffect, useRef, useState } from "react"
 import { router } from "expo-router"
 import AsyncStorage from "@react-native-async-storage/async-storage"
@@ -86,7 +88,7 @@ function StarPicker({
           <Ionicons
             name={value <= rating ? "star" : "star-outline"}
             size={20}
-            color={value <= rating ? "#F59E0B" : "#CBD5E1"}
+            color={value <= rating ? COLORS.warning : "#CBD5E1"}
           />
         </TouchableOpacity>
       ))}
@@ -232,11 +234,11 @@ const ProfileScreen = () => {
   const getStatusConfig = (status: ProjectItem["status"]) => {
     switch (status) {
       case "accepted":
-        return { bg: "#ECFDF5", text: "#166534", label: "Accepted", dot: "#22C55E" }
+        return { bg: "#ECFDF5", text: "#166534", label: "Accepted", dot: COLORS.success }
       case "pending":
-        return { bg: "#FEF3C7", text: "#92400E", label: "Pending", dot: "#F59E0B" }
+        return { bg: "#FEF3C7", text: "#92400E", label: "Pending", dot: COLORS.warning }
       default:
-        return { bg: "#FEE2E2", text: "#B91C1C", label: "Rejected", dot: "#EF4444" }
+        return { bg: "#FEE2E2", text: "#B91C1C", label: "Rejected", dot: COLORS.error }
     }
   }
 
@@ -298,13 +300,20 @@ const ProfileScreen = () => {
       <View
         key={project.id}
         className="mb-3 rounded-[24px] border border-slate-200 bg-white p-4"
+        style={profileStyles.cardShadow}
       >
         <View className="mb-3 flex-row items-start justify-between gap-3">
           <View className="flex-1">
             <Text className="text-base font-bold text-slate-950">{project.title}</Text>
             <Text className="mt-1 text-sm text-slate-500">{project.client} · {project.category}</Text>
           </View>
-          <View className="rounded-full px-3 py-1.5" style={{ backgroundColor: config.bg }}>
+          <View
+            className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
+            style={{ backgroundColor: config.bg }}
+          >
+            <View
+              style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: config.dot }}
+            />
             <Text className="text-xs font-bold" style={{ color: config.text }}>
               {config.label}
             </Text>
@@ -329,7 +338,7 @@ const ProfileScreen = () => {
         <View className="mb-3 flex-row gap-3">
           <View
             className="flex-1 rounded-2xl p-3"
-            style={{ borderLeftWidth: 3, borderLeftColor: "#2D4A6A", backgroundColor: "#F8FAFC" }}
+            style={{ borderLeftWidth: 3, borderLeftColor: COLORS.navy, backgroundColor: COLORS.surfaceMuted }}
           >
             <Text className="text-xs font-bold uppercase tracking-[1px] text-slate-400">
               Quotation
@@ -385,7 +394,7 @@ const ProfileScreen = () => {
                 }))
               }
               placeholder="Optional comment"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={COLORS.textMuted}
               multiline
               className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900"
               style={{ minHeight: 86, textAlignVertical: "top" }}
@@ -423,28 +432,36 @@ const ProfileScreen = () => {
           title: "Full name",
           value: user?.fullName || "Please fill in your name",
           icon: "pencil",
+          leftIcon: "person-outline",
         },
         {
           title: "About you",
           value: "Write important information that clients might need to know",
           icon: "pencil",
+          leftIcon: "information-circle-outline",
         },
         {
           title: "Education and experience",
           value: "Add the education you have and past work experience",
           icon: "add",
+          leftIcon: "school-outline",
         },
         {
           title: "Address and region",
           value: "We use your area to show nearby jobs without exposing your full address.",
           icon: "add",
+          leftIcon: "location-outline",
         },
       ].map((item) => (
         <View
           key={item.title}
           className="mb-2.5 rounded-xl border border-slate-200 bg-white p-4"
+          style={profileStyles.cardShadow}
         >
           <View className="flex-row items-start justify-between">
+            <View style={profileStyles.infoIconCircle}>
+              <Ionicons name={item.leftIcon as any} size={16} color={COLORS.navy} />
+            </View>
             <View className="flex-1">
               <Text className="mb-1.5 text-[11px] font-medium uppercase text-slate-400">
                 {item.title}
@@ -452,13 +469,16 @@ const ProfileScreen = () => {
               <Text className="text-[13px] leading-5 text-slate-600">{item.value}</Text>
             </View>
             <TouchableOpacity className="p-1">
-              <Ionicons name={item.icon as any} size={18} color="#94A3B8" />
+              <Ionicons name={item.icon as any} size={18} color={COLORS.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
       ))}
 
-      <View className="mb-2.5 rounded-xl border border-slate-200 bg-white p-4">
+      <View
+        className="mb-2.5 rounded-xl border border-slate-200 bg-white p-4"
+        style={profileStyles.cardShadow}
+      >
         <View className="flex-row items-start justify-between">
           <View className="flex-1 pr-3">
             <Text className="mb-1.5 text-[11px] font-medium uppercase text-slate-400">
@@ -470,9 +490,14 @@ const ProfileScreen = () => {
             </Text>
           </View>
           {proximityTrackingBusy ? (
-            <ActivityIndicator size="small" color="#2D4A6A" />
+            <ActivityIndicator size="small" color={COLORS.navy} />
           ) : (
-            <Switch value={proximityTrackingEnabled} onValueChange={toggleProximityTracking} />
+            <Switch
+              value={proximityTrackingEnabled}
+              onValueChange={toggleProximityTracking}
+              trackColor={{ false: COLORS.border, true: COLORS.navySoft }}
+              thumbColor={proximityTrackingEnabled ? COLORS.navy : COLORS.surface}
+            />
           )}
         </View>
       </View>
@@ -483,7 +508,7 @@ const ProfileScreen = () => {
     if (loading) {
       return (
         <View className="py-12 items-center">
-          <ActivityIndicator size="large" color="#2D4A6A" />
+          <ActivityIndicator size="large" color={COLORS.navy} />
           <Text className="mt-3.5 text-[13px] text-slate-400">
             Loading your applications...
           </Text>
@@ -495,7 +520,10 @@ const ProfileScreen = () => {
       <View className="px-4 pt-5">
         {acceptedProjects.length > 0 ? (
           <View className="mb-5">
-            <Text className="mb-3 text-[13px] font-medium text-slate-900">
+            <Text
+              className="mb-3 text-[13px] font-medium text-slate-900"
+              style={profileStyles.sectionLabel}
+            >
               Accepted · {acceptedProjects.length}
             </Text>
             {acceptedProjects.map(renderProject)}
@@ -504,7 +532,10 @@ const ProfileScreen = () => {
 
         {pendingProjects.length > 0 ? (
           <View className="mb-5">
-            <Text className="mb-3 text-[13px] font-medium text-slate-900">
+            <Text
+              className="mb-3 text-[13px] font-medium text-slate-900"
+              style={profileStyles.sectionLabel}
+            >
               Pending · {pendingProjects.length}
             </Text>
             {pendingProjects.map(renderProject)}
@@ -513,7 +544,10 @@ const ProfileScreen = () => {
 
         {rejectedProjects.length > 0 ? (
           <View className="mb-5">
-            <Text className="mb-3 text-[13px] font-medium text-slate-900">
+            <Text
+              className="mb-3 text-[13px] font-medium text-slate-900"
+              style={profileStyles.sectionLabel}
+            >
               Rejected · {rejectedProjects.length}
             </Text>
             {rejectedProjects.map(renderProject)}
@@ -537,9 +571,12 @@ const ProfileScreen = () => {
     <View className="px-4 pt-5">
       <View className="mb-4 rounded-[24px] border border-slate-200 bg-white p-5">
         <Text className="text-xs font-bold uppercase tracking-[1px] text-slate-400">Your rating</Text>
-        <Text className="mt-2 text-4xl font-bold text-slate-950">
-          {reviewSummary.averageRating > 0 ? reviewSummary.averageRating.toFixed(1) : "New"}
-        </Text>
+        <View className="mt-2 flex-row items-center gap-2">
+          <Ionicons name="star" size={22} color={COLORS.warning} />
+          <Text className="text-4xl font-bold text-slate-950">
+            {reviewSummary.averageRating > 0 ? reviewSummary.averageRating.toFixed(1) : "New"}
+          </Text>
+        </View>
         <Text className="mt-2 text-sm text-slate-500">
           {reviewSummary.reviewCount} review{reviewSummary.reviewCount === 1 ? "" : "s"}
         </Text>
@@ -556,6 +593,7 @@ const ProfileScreen = () => {
           <View
             key={review.id}
             className="mb-3 rounded-[24px] border border-slate-200 bg-white p-4"
+            style={profileStyles.cardShadow}
           >
             <View className="flex-row items-center justify-between">
               <Text className="text-base font-bold text-slate-950">{review.reviewerName}</Text>
@@ -565,7 +603,7 @@ const ProfileScreen = () => {
                     key={index}
                     name={index < review.rating ? "star" : "star-outline"}
                     size={14}
-                    color={index < review.rating ? "#F59E0B" : "#CBD5E1"}
+                    color={index < review.rating ? COLORS.warning : "#CBD5E1"}
                   />
                 ))}
               </View>
@@ -590,8 +628,8 @@ const ProfileScreen = () => {
     : user?.primaryEmailAddress?.emailAddress ?? null
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.surface }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
 
       {/* ── Verification modal (unchanged) ── */}
       <Modal
@@ -606,7 +644,7 @@ const ProfileScreen = () => {
               className="absolute right-4 top-4 z-10 p-1"
               onPress={() => setShowVerificationModal(false)}
             >
-              <Ionicons name="close" size={20} color="#9CA3AF" />
+              <Ionicons name="close" size={20} color={COLORS.textMuted} />
             </TouchableOpacity>
             <View className="items-center">
               <Text className="mb-2.5 text-base font-medium text-slate-900">
@@ -616,7 +654,7 @@ const ProfileScreen = () => {
                 Clients choose specialists with a verified ID or Passport. It only takes a minute.
               </Text>
               <TouchableOpacity
-                className="w-full rounded-[10px] bg-slate-900 px-6 py-3.5"
+                className="w-full rounded-xl bg-slate-900 px-6 py-3.5"
                 activeOpacity={0.85}
                 onPress={() => setShowVerificationModal(false)}
               >
@@ -647,7 +685,7 @@ const ProfileScreen = () => {
           onPress={() => setShowVerificationModal(true)}
           activeOpacity={0.7}
         >
-          <Ionicons name="settings-outline" size={19} color="#0F172A" />
+          <Ionicons name="settings-outline" size={19} color={COLORS.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -655,6 +693,12 @@ const ProfileScreen = () => {
 
         {/* ── Whop-style profile header ── */}
         <View style={profileStyles.hero}>
+          <LinearGradient
+            colors={[COLORS.navy, COLORS.navyDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={profileStyles.heroBand}
+          />
 
           {/* Avatar + stats row */}
           <View style={profileStyles.avatarRow}>
@@ -670,25 +714,34 @@ const ProfileScreen = () => {
             {/* Stats */}
             <View style={profileStyles.statsRow}>
               {loading ? (
-                <ActivityIndicator size="small" color="#2D4A6A" />
+                <ActivityIndicator size="small" color={COLORS.navy} />
               ) : (
                 <>
                   <View style={profileStyles.statItem}>
-                    <Text style={profileStyles.statValue}>{projects.length}</Text>
+                    <View style={profileStyles.statValueRow}>
+                      <Ionicons name="briefcase-outline" size={14} color={COLORS.textMuted} />
+                      <Text style={profileStyles.statValue}>{projects.length}</Text>
+                    </View>
                     <Text style={profileStyles.statLabel}>applied</Text>
                   </View>
                   <View style={profileStyles.statDivider} />
                   <View style={profileStyles.statItem}>
-                    <Text style={profileStyles.statValue}>
-                      {reviewSummary.averageRating > 0
-                        ? reviewSummary.averageRating.toFixed(1)
-                        : "—"}
-                    </Text>
+                    <View style={profileStyles.statValueRow}>
+                      <Ionicons name="star" size={14} color={COLORS.warning} />
+                      <Text style={profileStyles.statValue}>
+                        {reviewSummary.averageRating > 0
+                          ? reviewSummary.averageRating.toFixed(1)
+                          : "—"}
+                      </Text>
+                    </View>
                     <Text style={profileStyles.statLabel}>rating</Text>
                   </View>
                   <View style={profileStyles.statDivider} />
                   <View style={profileStyles.statItem}>
-                    <Text style={profileStyles.statValue}>{acceptedProjects.length}</Text>
+                    <View style={profileStyles.statValueRow}>
+                      <Ionicons name="checkmark-circle-outline" size={14} color={COLORS.textMuted} />
+                      <Text style={profileStyles.statValue}>{acceptedProjects.length}</Text>
+                    </View>
                     <Text style={profileStyles.statLabel}>accepted</Text>
                   </View>
                 </>
@@ -770,8 +823,8 @@ const profileStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E5E7EB",
-    backgroundColor: "#FFFFFF",
+    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
   topNavLeft: {
     flexDirection: "row",
@@ -784,12 +837,12 @@ const profileStyles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: COLORS.border,
   },
   topNavUsername: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#0F172A",
+    color: COLORS.textPrimary,
     letterSpacing: -0.2,
     flex: 1,
   },
@@ -797,7 +850,7 @@ const profileStyles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: COLORS.background,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 8,
@@ -806,37 +859,50 @@ const profileStyles = StyleSheet.create({
   /* Header hero */
   hero: {
     paddingHorizontal: 20,
-    paddingTop: 16,
     paddingBottom: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.surface,
+  },
+  heroBand: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 96,
+    borderBottomLeftRadius: RADIUS.xl,
+    borderBottomRightRadius: RADIUS.xl,
   },
 
   /* Avatar row */
   avatarRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
+    marginTop: 52,
     marginBottom: 14,
   },
   avatarWrap: {
-    position: "relative",
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: COLORS.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    ...SHADOW.card,
   },
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
   onlineDot: {
     position: "absolute",
-    bottom: 2,
-    right: 2,
+    bottom: 4,
+    right: 4,
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: "#22C55E",
+    backgroundColor: COLORS.success,
     borderWidth: 2,
-    borderColor: "#FFFFFF",
+    borderColor: COLORS.surface,
   },
 
   /* Stats */
@@ -846,42 +912,50 @@ const profileStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-around",
     marginLeft: 20,
+    paddingBottom: 2,
   },
   statItem: {
     alignItems: "center",
     flex: 1,
   },
+  statValueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
   statValue: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#0F172A",
+    color: COLORS.textPrimary,
     letterSpacing: -0.4,
+    fontFamily: "Quicksand-Bold",
   },
   statLabel: {
     fontSize: 11,
-    color: "#94A3B8",
+    color: COLORS.textMuted,
     marginTop: 2,
   },
   statDivider: {
     width: 1,
     height: 28,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: COLORS.border,
   },
 
   fullName: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#0F172A",
+    color: COLORS.textPrimary,
     letterSpacing: -0.3,
+    fontFamily: "Quicksand-Bold",
   },
   handle: {
     fontSize: 13,
-    color: "#64748B",
+    color: COLORS.textSecondary,
     marginTop: 2,
   },
   joined: {
     fontSize: 12,
-    color: "#94A3B8",
+    color: COLORS.textMuted,
     marginTop: 3,
   },
 
@@ -893,44 +967,62 @@ const profileStyles = StyleSheet.create({
   actionBtn: {
     flex: 1,
     height: 40,
-    borderRadius: 10,
+    borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
+    ...SHADOW.card,
   },
   actionBtnText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#0F172A",
+    color: COLORS.textPrimary,
   },
 
   tabBar: {
     flexDirection: "row",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E5E7EB",
-    backgroundColor: "#FFFFFF",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    backgroundColor: COLORS.surface,
   },
   tabItem: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    paddingVertical: 9,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.surfaceMuted,
   },
   tabItemActive: {
-    borderBottomColor: "#1F3A4A",
+    backgroundColor: COLORS.navy,
   },
   tabLabel: {
     fontSize: 13,
-    fontWeight: "400",
-    color: "#9CA3AF",
+    fontWeight: "600",
+    color: COLORS.textSecondary,
+    fontFamily: "Quicksand-SemiBold",
   },
   tabLabelActive: {
-    fontWeight: "600",
-    color: "#1F3A4A",
+    color: COLORS.surface,
+  },
+
+  /* Shared polish helpers */
+  sectionLabel: {
+    fontFamily: "Quicksand-SemiBold",
+  },
+  infoIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.navySoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  cardShadow: {
+    ...SHADOW.card,
   },
 })
 

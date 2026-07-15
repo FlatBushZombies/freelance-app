@@ -13,6 +13,7 @@ import {
   Animated,
   Easing,
 } from "react-native"
+import { COLORS, RADIUS, SHADOW } from "@/constants/theme"
 
 export type ApplicationResult =
   | { status: "success"; conversationId?: string; otherClerkId?: string; otherDisplayName?: string; jobTitle?: string }
@@ -60,34 +61,30 @@ function SuccessView({
           width: 96,
           height: 96,
           borderRadius: 48,
-          backgroundColor: "#DCFCE7",
+          backgroundColor: COLORS.successSoft,
           alignItems: "center",
           justifyContent: "center",
           marginBottom: 28,
-          shadowColor: "#16A34A",
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.18,
-          shadowRadius: 20,
-          elevation: 6,
+          ...SHADOW.raised,
         }}
       >
         <Text style={{ fontSize: 44, lineHeight: 52 }}>✓</Text>
       </Animated.View>
 
-      <Text style={{ fontSize: 26, fontWeight: "800", color: "#0F172A", textAlign: "center", marginBottom: 8 }}>
+      <Text style={{ fontSize: 26, fontWeight: "800", color: COLORS.textPrimary, textAlign: "center", marginBottom: 8 }}>
         Application Sent!
       </Text>
-      <Text style={{ fontSize: 15, color: "#475569", textAlign: "center", lineHeight: 22, marginBottom: 8 }}>
+      <Text style={{ fontSize: 15, color: COLORS.textSecondary, textAlign: "center", lineHeight: 22, marginBottom: 8 }}>
         Your application for
       </Text>
-      <View style={{ backgroundColor: "#F0FDF4", borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8, marginBottom: 32, maxWidth: "100%" }}>
-        <Text style={{ fontSize: 14, fontWeight: "700", color: "#16A34A", textAlign: "center" }} numberOfLines={2}>
+      <View style={{ backgroundColor: COLORS.successSoft, borderRadius: RADIUS.sm, paddingHorizontal: 16, paddingVertical: 8, marginBottom: 32, maxWidth: "100%" }}>
+        <Text style={{ fontSize: 14, fontWeight: "700", color: COLORS.success, textAlign: "center" }} numberOfLines={2}>
           {jobTitle}
         </Text>
       </View>
 
-      <View style={{ width: "100%", backgroundColor: "#F8FAFC", borderRadius: 16, padding: 16, marginBottom: 28, borderWidth: 1, borderColor: "#E2E8F0" }}>
-        <Text style={{ fontSize: 13, color: "#475569", textAlign: "center", lineHeight: 20 }}>
+      <View style={{ width: "100%", backgroundColor: COLORS.surfaceMuted, borderRadius: RADIUS.md, padding: 16, marginBottom: 28, borderWidth: 1, borderColor: COLORS.border }}>
+        <Text style={{ fontSize: 13, color: COLORS.textSecondary, textAlign: "center", lineHeight: 20 }}>
           🔔 The client has been notified and a coordination board has been opened. Check back for their response.
         </Text>
       </View>
@@ -98,16 +95,12 @@ function SuccessView({
           activeOpacity={0.85}
           style={{
             width: "100%",
-            backgroundColor: "#1E3A5F",
-            borderRadius: 16,
+            backgroundColor: COLORS.navyDark,
+            borderRadius: RADIUS.md,
             paddingVertical: 16,
             alignItems: "center",
             marginBottom: 12,
-            shadowColor: "#1E3A5F",
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.25,
-            shadowRadius: 12,
-            elevation: 5,
+            ...SHADOW.raised,
           }}
         >
           <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 16 }}>Open Coordination Board</Text>
@@ -120,13 +113,13 @@ function SuccessView({
         style={{
           width: "100%",
           borderWidth: 1.5,
-          borderColor: "#CBD5E1",
-          borderRadius: 16,
+          borderColor: COLORS.borderSoft,
+          borderRadius: RADIUS.md,
           paddingVertical: 14,
           alignItems: "center",
         }}
       >
-        <Text style={{ color: "#475569", fontWeight: "600", fontSize: 15 }}>Back to Jobs</Text>
+        <Text style={{ color: COLORS.textSecondary, fontWeight: "600", fontSize: 15 }}>Back to Jobs</Text>
       </TouchableOpacity>
     </Animated.View>
   )
@@ -162,21 +155,22 @@ function ErrorView({
           width: 96,
           height: 96,
           borderRadius: 48,
-          backgroundColor: "#FEF2F2",
+          backgroundColor: COLORS.errorSoft,
           alignItems: "center",
           justifyContent: "center",
           marginBottom: 28,
+          ...SHADOW.card,
         }}
       >
         <Text style={{ fontSize: 42, lineHeight: 52 }}>✕</Text>
       </Animated.View>
 
-      <Text style={{ fontSize: 24, fontWeight: "800", color: "#0F172A", textAlign: "center", marginBottom: 12 }}>
+      <Text style={{ fontSize: 24, fontWeight: "800", color: COLORS.textPrimary, textAlign: "center", marginBottom: 12 }}>
         Application Failed
       </Text>
 
-      <View style={{ backgroundColor: "#FEF2F2", borderRadius: 14, padding: 16, marginBottom: 32, width: "100%", borderWidth: 1, borderColor: "#FECACA" }}>
-        <Text style={{ fontSize: 14, color: "#B91C1C", textAlign: "center", lineHeight: 20 }}>
+      <View style={{ backgroundColor: COLORS.errorSoft, borderRadius: RADIUS.md, padding: 16, marginBottom: 32, width: "100%", borderWidth: 1, borderColor: "#FCA5A5" }}>
+        <Text style={{ fontSize: 14, color: COLORS.error, textAlign: "center", lineHeight: 20 }}>
           {message}
         </Text>
       </View>
@@ -186,16 +180,12 @@ function ErrorView({
         activeOpacity={0.85}
         style={{
           width: "100%",
-          backgroundColor: "#1E3A5F",
-          borderRadius: 16,
+          backgroundColor: COLORS.navyDark,
+          borderRadius: RADIUS.md,
           paddingVertical: 16,
           alignItems: "center",
           marginBottom: 12,
-          shadowColor: "#1E3A5F",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.2,
-          shadowRadius: 10,
-          elevation: 4,
+          ...SHADOW.raised,
         }}
       >
         <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 16 }}>Try Again</Text>
@@ -206,7 +196,7 @@ function ErrorView({
         activeOpacity={0.7}
         style={{ width: "100%", paddingVertical: 14, alignItems: "center" }}
       >
-        <Text style={{ color: "#94A3B8", fontWeight: "600", fontSize: 15 }}>Cancel</Text>
+        <Text style={{ color: COLORS.textMuted, fontWeight: "600", fontSize: 15 }}>Cancel</Text>
       </TouchableOpacity>
     </View>
   )
@@ -225,14 +215,15 @@ function AlreadyAppliedView({ onClose }: { onClose: () => void }) {
           alignItems: "center",
           justifyContent: "center",
           marginBottom: 28,
+          ...SHADOW.card,
         }}
       >
         <Text style={{ fontSize: 42, lineHeight: 52 }}>📋</Text>
       </View>
-      <Text style={{ fontSize: 24, fontWeight: "800", color: "#0F172A", textAlign: "center", marginBottom: 12 }}>
+      <Text style={{ fontSize: 24, fontWeight: "800", color: COLORS.textPrimary, textAlign: "center", marginBottom: 12 }}>
         Already Applied
       </Text>
-      <Text style={{ fontSize: 15, color: "#475569", textAlign: "center", lineHeight: 22, marginBottom: 32 }}>
+      <Text style={{ fontSize: 15, color: COLORS.textSecondary, textAlign: "center", lineHeight: 22, marginBottom: 32 }}>
         You've already submitted an application for this job. Check your boards for the latest status.
       </Text>
       <TouchableOpacity
@@ -240,10 +231,11 @@ function AlreadyAppliedView({ onClose }: { onClose: () => void }) {
         activeOpacity={0.85}
         style={{
           width: "100%",
-          backgroundColor: "#1E3A5F",
-          borderRadius: 16,
+          backgroundColor: COLORS.navyDark,
+          borderRadius: RADIUS.md,
           paddingVertical: 16,
           alignItems: "center",
+          ...SHADOW.raised,
         }}
       >
         <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 16 }}>Got It</Text>
@@ -276,70 +268,70 @@ function FormView({
       keyboardShouldPersistTaps="handled"
     >
       {/* Job context */}
-      <View style={{ backgroundColor: "#F0F9FF", borderRadius: 14, padding: 14, marginBottom: 24, borderWidth: 1, borderColor: "#BAE6FD" }}>
-        <Text style={{ fontSize: 11, fontWeight: "700", color: "#0369A1", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>
+      <View style={{ backgroundColor: COLORS.navySoft, borderRadius: RADIUS.md, padding: 14, marginBottom: 24, borderWidth: 1, borderColor: COLORS.borderSoft }}>
+        <Text style={{ fontSize: 11, fontWeight: "700", color: COLORS.navy, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4 }}>
           Applying for
         </Text>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: "#0C4A6E" }} numberOfLines={2}>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: COLORS.navyDark }} numberOfLines={2}>
           {jobTitle}
         </Text>
         <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <View style={{ backgroundColor: "#DBEAFE", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 12, fontWeight: "600", color: "#1D4ED8" }}>
+          <View style={{ backgroundColor: COLORS.navySoft, borderRadius: RADIUS.lg, paddingHorizontal: 10, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: COLORS.navy }}>
               Budget: US${jobBudget.toFixed(0)}
             </Text>
           </View>
-          <View style={{ backgroundColor: "#DCFCE7", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 12, fontWeight: "600", color: "#15803D" }}>5 spots max</Text>
+          <View style={{ backgroundColor: COLORS.successSoft, borderRadius: RADIUS.lg, paddingHorizontal: 10, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: COLORS.success }}>5 spots max</Text>
           </View>
         </View>
       </View>
 
       {/* Quotation */}
-      <Text style={{ fontSize: 14, fontWeight: "700", color: "#0F172A", marginBottom: 6 }}>
-        Your Quotation <Text style={{ color: "#EF4444" }}>*</Text>
+      <Text style={{ fontSize: 14, fontWeight: "700", color: COLORS.textPrimary, marginBottom: 6 }}>
+        Your Quotation <Text style={{ color: COLORS.error }}>*</Text>
       </Text>
-      <Text style={{ fontSize: 13, color: "#64748B", marginBottom: 10 }}>
+      <Text style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 10 }}>
         Propose your rate or total cost for this project
       </Text>
-      <View style={{ backgroundColor: "#F8FAFC", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1.5, borderColor: "#E2E8F0", flexDirection: "row", alignItems: "center", marginBottom: 24 }}>
-        <Text style={{ fontSize: 22, color: "#94A3B8", marginRight: 8 }}>💰</Text>
-        <Text style={{ fontSize: 18, fontWeight: "600", color: "#94A3B8", marginRight: 6 }}>US$</Text>
+      <View style={{ backgroundColor: COLORS.surfaceMuted, borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1.5, borderColor: COLORS.border, flexDirection: "row", alignItems: "center", marginBottom: 24 }}>
+        <Text style={{ fontSize: 22, color: COLORS.textMuted, marginRight: 8 }}>💰</Text>
+        <Text style={{ fontSize: 18, fontWeight: "600", color: COLORS.textMuted, marginRight: 6 }}>US$</Text>
         <TextInput
           value={quotation}
           onChangeText={setQuotation}
           placeholder="e.g. 150/hour or 2 500 total"
-          placeholderTextColor="#CBD5E1"
-          style={{ flex: 1, fontSize: 16, fontWeight: "600", color: "#0F172A" }}
+          placeholderTextColor={COLORS.borderSoft}
+          style={{ flex: 1, fontSize: 16, fontWeight: "600", color: COLORS.textPrimary }}
           keyboardType="default"
           autoFocus
         />
       </View>
 
       {/* Conditions */}
-      <Text style={{ fontSize: 14, fontWeight: "700", color: "#0F172A", marginBottom: 6 }}>
+      <Text style={{ fontSize: 14, fontWeight: "700", color: COLORS.textPrimary, marginBottom: 6 }}>
         Terms & Conditions
       </Text>
-      <Text style={{ fontSize: 13, color: "#64748B", marginBottom: 10 }}>
+      <Text style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 10 }}>
         Timeline, special requirements, or upfront payment terms (optional)
       </Text>
-      <View style={{ backgroundColor: "#F8FAFC", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1.5, borderColor: "#E2E8F0", marginBottom: 24 }}>
+      <View style={{ backgroundColor: COLORS.surfaceMuted, borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1.5, borderColor: COLORS.border, marginBottom: 24 }}>
         <TextInput
           value={conditions}
           onChangeText={setConditions}
           placeholder="e.g. Available immediately. Require 50% upfront..."
-          placeholderTextColor="#CBD5E1"
-          style={{ fontSize: 14, color: "#0F172A", minHeight: 80, textAlignVertical: "top" }}
+          placeholderTextColor={COLORS.borderSoft}
+          style={{ fontSize: 14, color: COLORS.textPrimary, minHeight: 80, textAlignVertical: "top" }}
           multiline
         />
       </View>
 
       {/* Info card */}
-      <View style={{ backgroundColor: "#EFF6FF", borderRadius: 14, padding: 14, marginBottom: 28, borderWidth: 1, borderColor: "#BFDBFE", flexDirection: "row", gap: 10 }}>
+      <View style={{ backgroundColor: COLORS.navySoft, borderRadius: RADIUS.md, padding: 14, marginBottom: 28, borderWidth: 1, borderColor: COLORS.borderSoft, flexDirection: "row", gap: 10 }}>
         <Text style={{ fontSize: 18 }}>ℹ️</Text>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 13, fontWeight: "700", color: "#1E40AF", marginBottom: 2 }}>First 5 applicants only</Text>
-          <Text style={{ fontSize: 12, color: "#3B82F6", lineHeight: 18 }}>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: COLORS.navy, marginBottom: 2 }}>First 5 applicants only</Text>
+          <Text style={{ fontSize: 12, color: COLORS.navy, lineHeight: 18 }}>
             Only the first 5 freelancers are shown to the client. Apply with a competitive rate!
           </Text>
         </View>
@@ -351,25 +343,22 @@ function FormView({
         disabled={isDisabled}
         activeOpacity={0.85}
         style={{
-          backgroundColor: isDisabled ? "#E2E8F0" : "#1E3A5F",
-          borderRadius: 16,
+          backgroundColor: isDisabled ? COLORS.border : COLORS.navyDark,
+          borderRadius: RADIUS.md,
           paddingVertical: 16,
           alignItems: "center",
           marginBottom: 12,
-          shadowColor: isDisabled ? "transparent" : "#1E3A5F",
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.25,
-          shadowRadius: 12,
-          elevation: isDisabled ? 0 : 5,
+          shadowColor: isDisabled ? "transparent" : COLORS.navyDark,
+          ...(isDisabled ? {} : SHADOW.raised),
         }}
       >
-        <Text style={{ color: isDisabled ? "#94A3B8" : "#FFFFFF", fontWeight: "700", fontSize: 16 }}>
+        <Text style={{ color: isDisabled ? COLORS.textMuted : "#FFFFFF", fontWeight: "700", fontSize: 16 }}>
           ⚡ Submit Application
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={{ paddingVertical: 12, alignItems: "center" }}>
-        <Text style={{ color: "#94A3B8", fontWeight: "600", fontSize: 14 }}>Cancel</Text>
+        <Text style={{ color: COLORS.textMuted, fontWeight: "600", fontSize: 14 }}>Cancel</Text>
       </TouchableOpacity>
     </ScrollView>
   )
@@ -444,17 +433,17 @@ export const ApplicationModal = ({
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1, backgroundColor: "#FFFFFF" }}
+        style={{ flex: 1, backgroundColor: COLORS.surface }}
       >
         {screen === "form" && (
-          <View style={{ paddingHorizontal: 24, paddingTop: 52, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "#F1F5F9", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", color: "#0F172A" }}>Apply for Job</Text>
+          <View style={{ paddingHorizontal: 24, paddingTop: 52, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: COLORS.textPrimary }}>Apply for Job</Text>
             <TouchableOpacity
               onPress={onClose}
-              style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#F1F5F9", alignItems: "center", justifyContent: "center" }}
+              style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceMuted, alignItems: "center", justifyContent: "center" }}
               activeOpacity={0.7}
             >
-              <Text style={{ fontSize: 16, color: "#64748B", fontWeight: "600" }}>✕</Text>
+              <Text style={{ fontSize: 16, color: COLORS.textSecondary, fontWeight: "600" }}>✕</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -465,11 +454,11 @@ export const ApplicationModal = ({
 
         {screen === "submitting" && (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-            <ActivityIndicator size="large" color="#1E3A5F" />
-            <Text style={{ marginTop: 20, fontSize: 16, fontWeight: "600", color: "#475569" }}>
+            <ActivityIndicator size="large" color={COLORS.navyDark} />
+            <Text style={{ marginTop: 20, fontSize: 16, fontWeight: "600", color: COLORS.textSecondary }}>
               Submitting your application…
             </Text>
-            <Text style={{ marginTop: 8, fontSize: 13, color: "#94A3B8", textAlign: "center" }}>
+            <Text style={{ marginTop: 8, fontSize: 13, color: COLORS.textMuted, textAlign: "center" }}>
               Setting up your coordination board
             </Text>
           </View>

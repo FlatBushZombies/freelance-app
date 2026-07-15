@@ -17,7 +17,7 @@ import { ConversationChatScreen, getInitials } from "@/components/messaging/Conv
 import { useMessagingConversations } from "@/hooks/useMessagingConversations";
 import { API_BASE_URL } from "@/lib/fetch";
 import { parseCard } from "@/lib/messageCards";
-import { COLORS, RADIUS } from "@/constants/theme";
+import { COLORS, RADIUS, SHADOW } from "@/constants/theme";
 import { Search, PenSquare, ChevronLeft } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -271,13 +271,13 @@ export default function ChatUsersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.surface,
   },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.surface,
     gap: 8,
   },
 
@@ -291,14 +291,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: "700",
-    color: "#0F172A",
+    color: COLORS.textPrimary,
     letterSpacing: -0.4,
   },
   headerIcon: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: COLORS.background,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: 16,
     marginBottom: 12,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: COLORS.background,
     borderRadius: RADIUS.pill,
     paddingHorizontal: 14,
     height: 42,
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: "#0F172A",
+    color: COLORS.textPrimary,
     paddingVertical: 0,
   },
 
@@ -334,15 +334,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderRadius: RADIUS.pill,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: COLORS.background,
   },
   pillActive: {
-    backgroundColor: "#0F172A",
+    backgroundColor: COLORS.textPrimary,
   },
   pillLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#64748B",
+    color: COLORS.textSecondary,
   },
   pillLabelActive: {
     color: "#FFFFFF",
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: "#F1F3F5",
+    backgroundColor: COLORS.background,
     marginLeft: 72,
   },
 
@@ -369,12 +369,12 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#EEF3F8",
+    backgroundColor: COLORS.navySoft,
     alignItems: "center",
     justifyContent: "center",
   },
   avatarPinned: {
-    backgroundColor: "#1F3A4A",
+    backgroundColor: COLORS.navyDark,
   },
   avatarText: {
     fontSize: 15,
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     backgroundColor: "#22C55E",
     borderWidth: 2,
-    borderColor: "#FFFFFF",
+    borderColor: COLORS.surface,
   },
   rowBody: {
     flex: 1,
@@ -408,16 +408,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: "600",
-    color: "#0F172A",
+    color: COLORS.textPrimary,
     marginRight: 8,
   },
   rowTime: {
     fontSize: 12,
-    color: "#94A3B8",
+    color: COLORS.textMuted,
   },
   rowPreview: {
     fontSize: 13,
-    color: "#64748B",
+    color: COLORS.textSecondary,
     lineHeight: 18,
   },
 
@@ -428,34 +428,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E5E7EB",
-    backgroundColor: "#FFFFFF",
+    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    ...SHADOW.card,
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F4F5F7",
+    backgroundColor: COLORS.background,
     alignItems: "center",
     justifyContent: "center",
   },
   detailTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#0F172A",
+    color: COLORS.textPrimary,
   },
   detailSub: {
     fontSize: 12,
-    color: "#64748B",
+    color: COLORS.textSecondary,
     marginTop: 1,
   },
 
   helper: {
-    color: "#64748B",
+    color: COLORS.textSecondary,
     fontSize: 13,
   },
   errorText: {
-    color: "#DC2626",
+    color: COLORS.error,
     marginHorizontal: 16,
     marginBottom: 12,
     fontSize: 13,
@@ -468,13 +469,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: "#0F172A",
+    color: COLORS.textPrimary,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 13,
     lineHeight: 20,
-    color: "#64748B",
+    color: COLORS.textSecondary,
     textAlign: "center",
     marginBottom: 20,
   },
@@ -482,7 +483,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: RADIUS.pill,
-    backgroundColor: "#0F172A",
+    backgroundColor: COLORS.textPrimary,
+    ...SHADOW.card,
   },
   refreshLabel: {
     color: "#FFFFFF",

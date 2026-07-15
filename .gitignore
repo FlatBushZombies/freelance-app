@@ -18,6 +18,9 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Firebase service account keys (FCM v1) - never commit
+keys/
+
 # Metro
 .metro-health-check*
 

@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { API_BASE_URL } from "@/lib/fetch";
 import { parseCard } from "@/lib/messageCards";
 import { useMessagingSocket, type ServerMessage } from "@/hooks/useMessagingSocket";
-import { COLORS, RADIUS } from "@/constants/theme";
+import { COLORS, RADIUS, SHADOW } from "@/constants/theme";
 
 const FREELANCER_TAGS = [
   { kind: "available-now", label: "Available now", icon: "checkmark-circle-outline" as const },
@@ -125,7 +125,7 @@ export function ConversationChatScreen({
           if (card?.kind === "application-submitted") {
             return (
               <View style={styles.systemPill}>
-                <Ionicons name="briefcase-outline" size={13} color="#64748B" />
+                <Ionicons name="briefcase-outline" size={13} color={COLORS.textSecondary} />
                 <Text style={styles.systemPillText}>
                   {isMine ? "You applied for this job" : `${item.senderName || "A freelancer"} applied for this job`}
                   {" · "}
@@ -250,7 +250,7 @@ export function ConversationChatScreen({
           value={messageText}
           onChangeText={setMessageText}
           placeholder="Message"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={COLORS.textMuted}
           multiline
           style={styles.input}
         />
@@ -273,9 +273,9 @@ export function ConversationChatScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 12 },
   header: { marginBottom: 8 },
-  title: { fontSize: 20, fontWeight: "700", color: "#0F172A" },
-  subtitle: { fontSize: 13, color: "#64748B", marginTop: 2 },
-  error: { color: "#DC2626", marginBottom: 10 },
+  title: { fontSize: 20, fontWeight: "700", color: COLORS.textPrimary },
+  subtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
+  error: { color: COLORS.error, marginBottom: 10 },
   timeline: { paddingBottom: 12, flexGrow: 1 },
 
   systemPill: {
@@ -289,12 +289,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginVertical: 10,
   },
-  systemPillText: { fontSize: 12, color: "#64748B", fontWeight: "500" },
+  systemPillText: { fontSize: 12, color: COLORS.textSecondary, fontWeight: "500" },
 
   senderName: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#94A3B8",
+    color: COLORS.textMuted,
     marginLeft: 40,
     marginBottom: 4,
   },
@@ -316,18 +316,18 @@ const styles = StyleSheet.create({
   bubbleMine: { backgroundColor: COLORS.navy },
   bubbleOther: { backgroundColor: COLORS.surfaceMuted },
   bubbleTag: { borderWidth: 1, borderColor: COLORS.borderSoft },
-  bubbleText: { fontSize: 15, lineHeight: 21, color: "#0F172A" },
+  bubbleText: { fontSize: 15, lineHeight: 21, color: COLORS.textPrimary },
   bubbleTextMine: { color: "#FFFFFF" },
 
   tagRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  tagLabel: { fontSize: 14, fontWeight: "700", color: "#0F172A" },
-  tagNote: { marginTop: 4, fontSize: 13, lineHeight: 18, color: "#475569" },
+  tagLabel: { fontSize: 14, fontWeight: "700", color: COLORS.textPrimary },
+  tagNote: { marginTop: 4, fontSize: 13, lineHeight: 18, color: COLORS.textSecondary },
 
-  timestamp: { fontSize: 11, color: "#94A3B8", marginTop: 3 },
+  timestamp: { fontSize: 11, color: COLORS.textMuted, marginTop: 3 },
   timestampMine: { alignSelf: "flex-end", marginRight: 2 },
   timestampOther: { alignSelf: "flex-start", marginLeft: 40 },
 
-  empty: { textAlign: "center", color: "#64748B", marginTop: 28, lineHeight: 20 },
+  empty: { textAlign: "center", color: COLORS.textSecondary, marginTop: 28, lineHeight: 20 },
 
   quickReplies: { flexGrow: 0, marginBottom: 8 },
   tagChip: {
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  tagChipText: { color: "#334155", fontWeight: "600", fontSize: 12 },
+  tagChipText: { color: COLORS.navy, fontWeight: "600", fontSize: 12 },
 
   composer: {
     flexDirection: "row",
@@ -351,13 +351,14 @@ const styles = StyleSheet.create({
     minHeight: 42,
     maxHeight: 110,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#FFFFFF",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
     borderRadius: RADIUS.pill,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    color: "#0F172A",
+    color: COLORS.textPrimary,
     fontSize: 15,
+    ...SHADOW.card,
   },
   sendButton: {
     width: 40,
@@ -366,6 +367,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.navy,
     alignItems: "center",
     justifyContent: "center",
+    ...SHADOW.card,
   },
-  sendButtonDisabled: { backgroundColor: "#CBD5E1" },
+  sendButtonDisabled: { backgroundColor: COLORS.border, shadowOpacity: 0, elevation: 0 },
 });

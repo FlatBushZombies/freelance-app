@@ -14,7 +14,7 @@ import {
 import { BellAlertIcon, BellIcon, XMarkIcon } from "react-native-heroicons/outline"
 import { Ionicons } from "@expo/vector-icons"
 import { useNotifications } from "@/contexts/NotificationsContext"
-import { COLORS } from "@/constants/theme"
+import { COLORS, RADIUS, SHADOW } from "@/constants/theme"
 import { navigateForNotificationData } from "@/lib/pushNotifications"
 
 interface NotificationBellProps {
@@ -145,18 +145,14 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
         }}
         activeOpacity={0.7}
         style={{
-          backgroundColor: item.read ? "#FFFFFF" : "#F8FAFC",
+          backgroundColor: item.read ? COLORS.surface : COLORS.surfaceMuted,
           marginHorizontal: 16,
           marginBottom: 12,
-          borderRadius: 16,
+          borderRadius: RADIUS.md,
           padding: 16,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: item.read ? 0.03 : 0.08,
-          shadowRadius: 8,
-          elevation: item.read ? 1 : 3,
+          ...SHADOW.card,
           borderWidth: 1,
-          borderColor: item.read ? "#F1F5F9" : "#E2E8F0",
+          borderColor: item.read ? "#F1F5F9" : COLORS.border,
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
@@ -179,7 +175,7 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
               style={{
                 fontSize: 15,
                 fontWeight: "700",
-                color: "#111827",
+                color: COLORS.textPrimary,
                 lineHeight: 20,
                 marginBottom: 4,
               }}
@@ -187,7 +183,7 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
               {copy.title}
             </Text>
 
-            <Text style={{ fontSize: 14, color: "#4B5563", lineHeight: 20, marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 20, marginBottom: 8 }}>
               {copy.body}
             </Text>
 
@@ -197,7 +193,7 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
                   alignSelf: "flex-start",
                   paddingHorizontal: 10,
                   paddingVertical: 5,
-                  borderRadius: 999,
+                  borderRadius: RADIUS.pill,
                   backgroundColor: "#ECFDF5",
                   marginBottom: 8,
                 }}
@@ -207,8 +203,8 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
             ) : null}
 
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Ionicons name="time-outline" size={14} color="#9CA3AF" />
-              <Text style={{ fontSize: 13, color: "#6B7280" }}>{formatTimeAgo(item.createdAt)}</Text>
+              <Ionicons name="time-outline" size={14} color={COLORS.textMuted} />
+              <Text style={{ fontSize: 13, color: COLORS.textSecondary }}>{formatTimeAgo(item.createdAt)}</Text>
             </View>
           </View>
 
@@ -236,7 +232,7 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
         className="w-12 h-12 rounded-full bg-gray-100 items-center justify-center relative"
         activeOpacity={0.7}
       >
-        <BellIcon size={24} color="#111827" />
+        <BellIcon size={24} color={COLORS.textPrimary} />
         {unreadCount > 0 && (
           <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 items-center justify-center px-1">
             <Text className="text-white text-xs font-bold">{unreadCount > 99 ? "99+" : unreadCount}</Text>
@@ -273,11 +269,11 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 999,
-                    backgroundColor: unreadCount === 0 ? "#F3F4F6" : "#ECFDF5",
+                    borderRadius: RADIUS.pill,
+                    backgroundColor: unreadCount === 0 ? COLORS.background : "#ECFDF5",
                   }}
                 >
-                  <Text style={{ color: unreadCount === 0 ? "#9CA3AF" : "#15803D", fontWeight: "600" }}>
+                  <Text style={{ color: unreadCount === 0 ? COLORS.textMuted : "#15803D", fontWeight: "600" }}>
                     Read all
                   </Text>
                 </TouchableOpacity>
@@ -285,7 +281,7 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
                   onPress={() => setModalVisible(false)}
                   className="w-11 h-11 rounded-full bg-gray-100 items-center justify-center"
                 >
-                  <XMarkIcon size={20} color="#4B5563" />
+                  <XMarkIcon size={20} color={COLORS.textSecondary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -293,7 +289,7 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
             {loading && notifications.length === 0 ? (
               <View className="flex-1 items-center justify-center">
                 <ActivityIndicator size="large" color={COLORS.navy} />
-                <Text style={{ color: "#6B7280", marginTop: 12 }}>Loading notifications...</Text>
+                <Text style={{ color: COLORS.textSecondary, marginTop: 12 }}>Loading notifications...</Text>
               </View>
             ) : notifications.length === 0 ? (
               <View className="flex-1 items-center justify-center px-6">
@@ -302,7 +298,7 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
                     backgroundColor: COLORS.navySoft,
                     width: 96,
                     height: 96,
-                    borderRadius: 28,
+                    borderRadius: RADIUS.xxl,
                     alignItems: "center",
                     justifyContent: "center",
                     marginBottom: 24,
@@ -310,10 +306,10 @@ export const NotificationBell = ({ userId: _userId }: NotificationBellProps) => 
                 >
                   <BellAlertIcon size={42} color={COLORS.navy} />
                 </View>
-                <Text style={{ fontSize: 20, fontWeight: "700", color: "#111827", marginBottom: 8, textAlign: "center" }}>
+                <Text style={{ fontSize: 20, fontWeight: "700", color: COLORS.textPrimary, marginBottom: 8, textAlign: "center" }}>
                   No notifications yet
                 </Text>
-                <Text style={{ fontSize: 15, color: "#6B7280", textAlign: "center", lineHeight: 22 }}>
+                <Text style={{ fontSize: 15, color: COLORS.textSecondary, textAlign: "center", lineHeight: 22 }}>
                   You&apos;ll be notified when clients accept or reject your offers and when they share contact details.
                 </Text>
               </View>

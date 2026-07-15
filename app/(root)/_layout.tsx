@@ -24,7 +24,7 @@ import {
   UserIcon as UserSolid,
 } from "react-native-heroicons/solid"
 import { useNotifications } from "@/contexts/NotificationsContext"
-import { COLORS } from "@/constants/theme"
+import { COLORS, RADIUS } from "@/constants/theme"
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -50,7 +50,7 @@ const C = {
   bg:       "#EEF2F3",
   active:   COLORS.navyDark,
   inactive: "#A8B4BD",
-  surface:  "#FFFFFF",
+  surface:  COLORS.surface,
   badge:    "#E35D5B",
 }
 
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   pill: {
-    borderRadius: 36,
+    borderRadius: RADIUS.pill,
     overflow: "hidden",
     ...Platform.select({
       ios: {
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     minWidth: 17,
     height: 17,
     paddingHorizontal: 3,
-    borderRadius: 8.5,
+    borderRadius: RADIUS.pill,
     backgroundColor: C.badge,
     alignItems: "center",
     justifyContent: "center",

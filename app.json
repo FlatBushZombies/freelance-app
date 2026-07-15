@@ -11,7 +11,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["location"]
+        "UIBackgroundModes": ["location"],
+        "NSUserNotificationsUsageDescription": "Quickhands Pro uses notifications to alert you about new job matches, application updates, and messages."
       }
     },
     "android": {
@@ -24,6 +25,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
+      "permissions": ["android.permission.POST_NOTIFICATIONS"],
       "package": "com.noirsfera.quickhandspro"
     },
     "web": {
@@ -33,6 +35,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/quickhands.png",
+          "color": "#1A7F5A"
+        }
+      ],
       [
         "expo-splash-screen",
         {
